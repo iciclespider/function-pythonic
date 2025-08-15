@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-helm upgrade --install crossplane --namespace crossplane-system --create-namespace crossplane-preview/crossplane --version v2.0.1
+helm upgrade --install crossplane --namespace crossplane-system --create-namespace crossplane-stable/crossplane --version v2.0.2
 
 kubectl apply -f - <<EOF
 apiVersion: pkg.crossplane.io/v1beta1
@@ -84,15 +84,129 @@ spec:
     source: InjectedIdentity
 EOF
 
+kubectl delete -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: function-pythonic
+rules:
+# Framework: runtime observation of namespaces & CRDs (addition/deletion).
+#- apiGroups:
+#  - apiextensions.k8s.io
+#  resources:
+#  - customresourcedefinitions
+#  verbs:
+#  - list
+#  - watch
+#- apiGroups:
+#  - ''
+#  resources:
+#  - namespaces
+#  verbs:
+#  - list
+#  - watch
+# Application: read-only access for watching cluster-wide.
+- apiGroups:
+  - ''
+  resources:
+  - configmaps
+  - secrets
+  verbs:
+  - list
+  - watch
+  - patch
+EOF
+
+kubectl delete -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: function-pythonic
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: function-pythonic
+subjects:
+- kind: ServiceAccount
+  namespace: crossplane-system
+  name: function-pythonic
+EOF
+
+kubectl apply -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: crossplane-system
+  name: function-pythonic
+rules:
+# Framework: posting the events about the handlers progress/errors.
+- apiGroups:
+  - ''
+  resources:
+  - events
+  verbs:
+  - create
+# Application: watching & handling for the custom resource we declare.
+- apiGroups:
+  - ''
+  resources:
+  - configmaps
+  - secrets
+  verbs:
+  - list
+  - watch
+  - patch
+EOF
+
+kubectl apply -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: crossplane-system
+  name: function-pythonic
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: function-pythonic
+subjects:
+- kind: ServiceAccount
+  name: function-pythonic
+EOF
+
+kubectl apply -f - <<EOF
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: function-pythonic
+spec:
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+          - name: package-runtime
+            args:
+            - --debug
+            - --packages
+            - --packages-namespace=crossplane-system
+          serviceAccountName: function-pythonic
+  serviceAccountTemplate:
+    metadata:
+      name: function-pythonic
+EOF
+
+#  package: ghcr.io/fortra/function-pythonic:v0.0.5
+
 kubectl apply -f - <<EOF
 apiVersion: pkg.crossplane.io/v1
 kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.0.5
+  package: ghcr.io/iciclespider/function-pythonic:v0.0.0-20250816054913-6fda70633e20
   runtimeConfigRef:
     apiVersion: pkg.crossplane.io/v1beta1
     kind: DeploymentRuntimeConfig
-    name: provider-incluster
+    name: function-pythonic
 EOF

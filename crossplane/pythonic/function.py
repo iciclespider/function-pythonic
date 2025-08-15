@@ -5,6 +5,7 @@ import base64
 import builtins
 import importlib
 import inspect
+import sys
 
 import grpc
 import crossplane.function.logging
@@ -31,6 +32,14 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         self.debug = debug
         self.logger = crossplane.function.logging.get_logger()
         self.clazzes = {}
+
+    def invalidate_module(self, module):
+        if module in sys.modules:
+            del sys.modules[module]
+        for composite in [composite for composite in self.clazzes.keys()]:
+            if '\n' not in composite:
+                if composite.rsplit('.', 1)[0] == module:
+                    del self.clazzes[composite]
 
     async def RunFunction(
         self, request: fnv1.RunFunctionRequest, _: grpc.aio.ServicerContext
@@ -70,43 +79,43 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                 try:
                     exec(composite, module.__dict__)
                 except Exception as e:
-                    crossplane.function.response.fatal(response, f"Exec exception: {e}")
                     logger.exception('Exec exception')
+                    crossplane.function.response.fatal(response, f"Exec exception: {e}")
                     return response
                 composite = ['<script>', 'Composite']
             else:
                 composite = composite.rsplit('.', 1)
                 if len(composite) == 1:
-                    crossplane.function.response.fatal(response, f"Composite class name does not include module: {composite[0]}")
                     logger.error(f"Composite class name does not include module: {composite[0]}")
+                    crossplane.function.response.fatal(response, f"Composite class name does not include module: {composite[0]}")
                     return response
                 try:
                     module = importlib.import_module(composite[0])
                 except Exception as e:
+                    logger.error(str(e))
                     crossplane.function.response.fatal(response, f"Import module exception: {e}")
-                    logger.exception('Import module exception')
                     return response
             clazz = getattr(module, composite[1], None)
             if not clazz:
-                crossplane.function.response.fatal(response, f"{composite[0]} did not define: {composite[1]}")
                 logger.error(f"{composite[0]} did not define: {composite[1]}")
+                crossplane.function.response.fatal(response, f"{composite[0]} did not define: {composite[1]}")
                 return response
             composite = '.'.join(composite)
             if not inspect.isclass(clazz):
-                crossplane.function.response.fatal(response, f"{composite} is not a class")
                 logger.error(f"{composite} is not a class")
+                crossplane.function.response.fatal(response, f"{composite} is not a class")
                 return response
             if not issubclass(clazz, BaseComposite):
-                crossplane.function.response.fatal(response, f"{composite} is not a subclass of BaseComposite")
                 logger.error(f"{composite} is not a subclass of BaseComposite")
+                crossplane.function.response.fatal(response, f"{composite} is not a subclass of BaseComposite")
                 return response
             self.clazzes[composite] = clazz
 
         try:
             composite = clazz(request, response, logger)
         except Exception as e:
-            crossplane.function.response.fatal(response, f"Instatiate exception: {e}")
             logger.exception('Instatiate exception')
+            crossplane.function.response.fatal(response, f"Instatiate exception: {e}")
             return response
 
         try:
@@ -114,8 +123,8 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             if asyncio.iscoroutine(result):
                 await result
         except Exception as e:
-            crossplane.function.response.fatal(response, f"Compose exception: {e}")
             logger.exception('Compose exception')
+            crossplane.function.response.fatal(response, f"Compose exception: {e}")
             return response
 
         unknownResources = []

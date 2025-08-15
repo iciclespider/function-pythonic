@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
-# It's important that this is Debian 12 to match the distroless image.
-FROM debian:12-slim AS build
+# It's important that this is Debian to match the python image.
+FROM debian:trixie-slim AS build
 
 #RUN --mount=type=cache,target=/var/lib/apt/lists \
 #    --mount=type=cache,target=/var/cache/apt \
@@ -35,9 +35,13 @@ RUN \
 
 # Copy the pythonic venv to our runtime stage. It's important that the path be
 # the same as in the build stage, to avoid shebang paths and symlinks breaking. 
-FROM gcr.io/distroless/python3-debian12 AS image
-WORKDIR /
-USER nonroot:nonroot
-COPY --from=build --chown=nonroot:nonroot /venv/fn /venv/fn
+FROM python:3.13-slim-trixie AS image
+RUN \
+  addgroup --gid 2000 pythonic && \
+  adduser --uid 2000 --ingroup pythonic --disabled-password --no-create-home --disabled-login pythonic
+USER pythonic:pythonic
+COPY --from=build --chown=pythonic:pythonic /venv/fn /venv/fn
+RUN \
+  ln -sf /usr/local/bin/python3 /venv/fn/bin/python3
 EXPOSE 9443
-ENTRYPOINT ["/venv/fn/bin/pythonic"]
+ENTRYPOINT ["/venv/fn/bin/python", "-m", "crossplane.pythonic.main"]
