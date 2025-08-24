@@ -27,7 +27,7 @@ request:
   input:
     composite: |
       apiVersion = 'dbforpostgresql.azure.upbound.io/v1beta1'
-      class Composite(BaseComposite):
+      class UnknownsFatalComposite(BaseComposite):
         def compose(self):
           self.ttl = (5 * 60) + 30
           s = self.resources.flexServer(apiVersion, 'FlexibleServer')

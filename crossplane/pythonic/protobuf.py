@@ -25,10 +25,16 @@ append = sys.maxsize
 
 
 def Map(**kwargs):
-    return Values(None, None, None, Values.Type.MAP)(**kwargs)
+    map = Values(None, None, None, Values.Type.MAP)
+    for name, value in kwargs.items():
+        map[name] = value
+    return map
 
 def List(*args):
-    return Values(None, None, None, Values.Type.LIST)(*args)
+    list = Values(None, None, None, Values.Type.LIST)
+    for ix, value in enumerate(args):
+        list[ix] = value
+    return list
 
 def Unknown():
     return Values(None, None, None, Values.Type.UNKNOWN)
@@ -683,36 +689,16 @@ class Values:
     def __call__(self, *args, **kwargs):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
+        self.__dict__['_values'] = None
+        self.__dict__['_type'] = self.Type.UNKNOWN
         self._cache.clear()
         self._unknowns.clear()
         if len(kwargs):
-            if not self._isMap:
-                if not self._isUnknown:
-                    raise ValueError('Cannot specify kwargs on lists')
-                self.__dict__['_type'] = self.Type.MAP
             if len(args):
-                raise ValueError('Connect specify args on maps')
-            if self._values is None:
-                if self._parent is None:
-                    self.__dict__['_values'] = google.protobuf.struct_pb2.Struct()
-                else:
-                    self.__dict__['_values'] = self._parent._create_child(self._key, self._type)
-            self._values.Clear()
+                raise ValueError('Connect specify both kwargs and args')
             for key, value in kwargs.items():
                 self[key] = value
         elif len(args):
-            if not self._isList:
-                if not self._isUnknown:
-                    raise ValueError('Cannot specify args on maps')
-                self.__dict__['_type'] = self.Type.LIST
-            if len(kwargs):
-                raise ValueError('Connect specify kwargs on lists')
-            if self._values is None:
-                if self._parent is None:
-                    self.__dict__['_values'] = google.protobuf.struct_pb2.ListValue()
-                else:
-                    self.__dict__['_values'] = self._parent._create_child(self._key, self._type)
-            self._values.Clear()
             for key in range(len(args)):
                 self[key] = args[key]
         return self
@@ -767,17 +753,21 @@ class Values:
             values[key].number_value = value
         elif isinstance(value, dict):
             values[key].struct_value.Clear()
-            self[key](**value)
+            for k, v in value.items():
+                self[key][k] = v
         elif isinstance(value, (list, tuple)):
             values[key].list_value.Clear()
-            self[key](*value)
+            for ix, v in enumerate(value):
+                self[key][ix] = v
         elif isinstance(value, Values):
             if value._isMap:
                 values[key].struct_value.Clear()
-                self[key](**{k:v for k,v in value})
+                for k, v in value:
+                    self[key][k] = v
             elif value._isList:
                 values[key].list_value.Clear()
-                self[key](*[v for v in value])
+                for ix, v in enumerate(value):
+                    self[key][ix] = v
             else:
                 self._unknowns[key] = value
                 if self._isMap:

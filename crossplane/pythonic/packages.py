@@ -14,7 +14,7 @@ PACKAGE_LABEL = {'function-pythonic.package': kopf.PRESENT}
 PACKAGES_DIR = None
 
 
-def operator(grpc_server, grpc_runner, packages_secrets, packages_namespace, packages_dir):
+def operator(grpc_server, grpc_runner, packages_secrets, packages_namespaces, packages_dir):
     logging.getLogger('kopf.objects').setLevel(logging.INFO)
     global GRPC_SERVER, GRPC_RUNNER, PACKAGES_DIR
     GRPC_SERVER = grpc_server
@@ -28,8 +28,8 @@ def operator(grpc_server, grpc_runner, packages_secrets, packages_namespace, pac
         kopf.on.delete('', 'v1', 'secrets', labels=PACKAGE_LABEL)(delete)
     return kopf.operator(
         standalone=True,
-        clusterwide=not packages_namespace,
-        namespaces=packages_namespace,
+        clusterwide=not packages_namespaces,
+        namespaces=packages_namespaces,
     )
 
 

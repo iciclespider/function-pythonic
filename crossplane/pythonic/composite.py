@@ -638,15 +638,6 @@ class Event:
                 self._result.severity = fnv1.Severity.SEVERITY_NORMAL
 
     @property
-    def message(self):
-        return self._result.message if bool(self) else None
-
-    @message.setter
-    def message(self, message):
-        if bool(self):
-            self._result.message = message
-
-    @property
     def reason(self):
         return self._result.reason if bool(self) else None
 
@@ -654,6 +645,15 @@ class Event:
     def reason(self, reason):
         if bool(self):
             self._result.reason = reason
+
+    @property
+    def message(self):
+        return self._result.message if bool(self) else None
+
+    @message.setter
+    def message(self, message):
+        if bool(self):
+            self._result.message = message
 
     @property
     def claim(self):

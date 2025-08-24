@@ -87,7 +87,18 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                     logger.exception('Exec exception')
                     crossplane.function.response.fatal(response, f"Exec exception: {e}")
                     return response
-                composite = ['<script>', 'Composite']
+                for field in dir(module):
+                    value = getattr(module, field)
+                    if inspect.isclass(value) and issubclass(value, BaseComposite):
+                        if clazz:
+                            logger.error('Composite script has multiple BaseComposite classes')
+                            crossplane.function.response.fatal(response, 'Composite script has multiple BaseComposite classes')
+                            return response
+                        clazz = value
+                if not clazz:
+                    logger.error('Composite script does not have have a BaseComposite class')
+                    crossplane.function.response.fatal(response, 'Composite script does have have a BaseComposite class')
+                    return response
             else:
                 composite = composite.rsplit('.', 1)
                 if len(composite) == 1:
@@ -100,20 +111,20 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                     logger.error(str(e))
                     crossplane.function.response.fatal(response, f"Import module exception: {e}")
                     return response
-            clazz = getattr(module, composite[1], None)
-            if not clazz:
-                logger.error(f"{composite[0]} did not define: {composite[1]}")
-                crossplane.function.response.fatal(response, f"{composite[0]} did not define: {composite[1]}")
-                return response
-            composite = '.'.join(composite)
-            if not inspect.isclass(clazz):
-                logger.error(f"{composite} is not a class")
-                crossplane.function.response.fatal(response, f"{composite} is not a class")
-                return response
-            if not issubclass(clazz, BaseComposite):
-                logger.error(f"{composite} is not a subclass of BaseComposite")
-                crossplane.function.response.fatal(response, f"{composite} is not a subclass of BaseComposite")
-                return response
+                clazz = getattr(module, composite[1], None)
+                if not clazz:
+                    logger.error(f"{composite[0]} did not define: {composite[1]}")
+                    crossplane.function.response.fatal(response, f"{composite[0]} did not define: {composite[1]}")
+                    return response
+                composite = '.'.join(composite)
+                if not inspect.isclass(clazz):
+                    logger.error(f"{composite} is not a class")
+                    crossplane.function.response.fatal(response, f"{composite} is not a class")
+                    return response
+                if not issubclass(clazz, BaseComposite):
+                    logger.error(f"{composite} is not a subclass of BaseComposite")
+                    crossplane.function.response.fatal(response, f"{composite} is not a subclass of BaseComposite")
+                    return response
             self.clazzes[composite] = clazz
 
         try:

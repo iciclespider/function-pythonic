@@ -14,13 +14,16 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
 ]
 
+dynamic = ["version"]
+
 dependencies = [
   "crossplane-function-sdk-python==0.9.0",
-  "kopf==1.38.0",
   "pyyaml==6.0.2",
 ]
 
-dynamic = ["version"]
+[project.optional-dependencies]
+packages = ["kopf==1.38.0"]
+pip-install = ["pip==25.2"]
 
 [project.urls]
 Documentation = "https://github.com/fortra/function-pythonic#readme"

@@ -27,7 +27,7 @@ request:
   input:
     composite: |
       apiVersion = 'dbforpostgresql.azure.upbound.io/v1beta1'
-      class Composite(BaseComposite):
+      class UnknownsWarningComposite(BaseComposite):
         def compose(self):
           self.unknownsFatal = False
           self.ttl = (5 * 60) + 30

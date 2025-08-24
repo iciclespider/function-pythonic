@@ -1,7 +1,7 @@
 request:
   input:
     composite: |
-      class Composite(BaseComposite):
+      class BucketComposite(BaseComposite):
         def compose(self):
 
           self.resources.bucket1.apiVersion = 's3.aws.upbound.io/v1beta2'

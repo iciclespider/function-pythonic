@@ -8,7 +8,7 @@ request:
           f: '1'
   input:
     composite: |
-      class Composite(BaseComposite):
+      class ContextComposite(BaseComposite):
         def compose(self):
           self.environment.update = 'environment'
           self.environment.nestedEnvUpdate.hello = 'world'

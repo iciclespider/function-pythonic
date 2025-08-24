@@ -13,7 +13,6 @@ import traceback
 import crossplane.function.logging
 import crossplane.function.proto.v1.run_function_pb2_grpc as grpcv1
 import grpc
-import pip._internal.cli.main
 
 from . import function
 
@@ -24,7 +23,7 @@ def main():
 
 class Main:
     async def main(self):
-        parser = argparse.ArgumentParser('Forta Crossplane Function')
+        parser = argparse.ArgumentParser('Crossplane Function Pythonic')
         parser.add_argument(
             '--debug', '-d',
             action='store_true',
@@ -40,18 +39,18 @@ class Main:
         parser.add_argument(
             '--address',
             default='0.0.0.0:9443',
-            help='Address at which to listen for gRPC connections, default: 0.0.0.0:9443',
+            help='Address to listen on for gRPC connections, default: 0.0.0.0:9443',
         )
         parser.add_argument(
             '--tls-certs-dir',
             default=os.getenv('TLS_SERVER_CERTS_DIR'),
             metavar='DIRECTORY',
-            help='Serve using mTLS certificates.',
+            help='Serve using TLS certificates.',
         )
         parser.add_argument(
             '--insecure',
             action='store_true',
-            help='Run without mTLS credentials. If you supply this flag --tls-certs-dir will be ignored.',
+            help='Run without mTLS credentials, --tls-certs-dir will be ignored.',
         )
         parser.add_argument(
             '--packages',
@@ -94,15 +93,23 @@ class Main:
             help='Allow oversized protobuf messages'
         )
         args = parser.parse_args()
+        if not args.tls_certs_dir and not args.insecure:
+            print('Either --tls-certs-dir or --insecure must be specified', file=sys.stderr)
+            sys.exit(1)
+
         self.configure_logging(args)
-
-        if args.pip_install:
-            pip._internal.cli.main.main(['install', *shlex.split(args.pip_install)])
-
         # enables read only volumes or mismatched uid volumes
         sys.dont_write_bytecode = True
+        await self.run(args)
+
+    # Allow for independent running of function-pythonic
+    async def run(self, args):
+        if args.pip_install:
+            import pip._internal.cli.main
+            pip._internal.cli.main.main(['install', '--user', *shlex.split(args.pip_install)])
+
         for path in reversed(args.python_path):
-            sys.path.insert(0, str(pathlib.Path(path).resolve()))
+            sys.path.insert(0, str(pathlib.Path(path).expanduser().resolve()))
 
         if args.allow_oversize_protos:
             from google.protobuf.internal import api_implementation
@@ -113,8 +120,10 @@ class Main:
         grpc_runner = function.FunctionRunner(args.debug)
         grpc_server = grpc.aio.server()
         grpcv1.add_FunctionRunnerServiceServicer_to_server(grpc_runner, grpc_server)
-        if args.tls_certs_dir:
-            certs = pathlib.Path(args.tls_certs_dir)
+        if args.insecure:
+            grpc_server.add_insecure_port(args.address)
+        else:
+            certs = pathlib.Path(args.tls_certs_dir).expanduser().resolve()
             grpc_server.add_secure_port(
                 args.address,
                 grpc.ssl_server_credentials(
@@ -126,10 +135,6 @@ class Main:
                     require_client_auth=True,
                 ),
             )
-        else:
-            if not args.insecure:
-                raise ValueError('Either --tls-certs-dir or --insecure must be specified')
-            grpc_server.add_insecure_port(args.address)
         await grpc_server.start()
 
         if args.packages:

@@ -23,7 +23,7 @@ request:
             clusterIP: 10.96.196.65
   input:
     composite: |
-        class Composite(BaseComposite):
+        class GetStartedComposite(BaseComposite):
           def compose(self):
             labels = {'example.crossplane.io/app': self.metadata.name}
 

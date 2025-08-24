@@ -11,7 +11,7 @@ request:
           password: hxt1nwu9vmt@qtb3HVW
   input:
     composite: |
-      class Composite(BaseComposite):
+      class InlineComposite(BaseComposite):
         def compose(self):
           for ix in range(self.spec.count):
             user = f"test-user-{ix}"

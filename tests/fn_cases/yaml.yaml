@@ -16,7 +16,7 @@ request:
             scalar3: 123
   input:
     composite: |
-      class Composite(BaseComposite):
+      class YamlComposite(BaseComposite):
         def compose(self):
           self.status.fromYaml = Yaml(self.spec.yamlBlob).key2
           self.status.toYaml = format(self.spec.complexDictionary, 'yaml')

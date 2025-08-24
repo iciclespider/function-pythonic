@@ -21,7 +21,7 @@ request:
               lastTransitionTime: '2023-11-03T09:07:31Z'
   input:
     composite: |
-      class Composite(BaseComposite):
+      class ConditionsComposite(BaseComposite):
         def compose(self):
           self.status.compositeCondition = self.conditions.Ready
           self.status.compositeNotFound = self.conditions.Other

@@ -28,7 +28,7 @@ spec:
       apiVersion: pythonic.fn.crossplane.io/v1beta1
       kind: Composite
       composite: |
-        class Composite(BaseComposite):
+        class VpcComposite(BaseComposite):
           def compose(self):
             vpc = self.resources.vpc('ec2.aws.crossplane.io/v1beta1', 'VPC')
             vpc.spec.forProvider.region = self.spec.region
@@ -57,7 +57,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.0.7
+  package: ghcr.io/fortra/function-pythonic:v0.0.9
 ```
 ## Composed Resource Dependencies
 
@@ -158,13 +158,13 @@ proto = format(request, 'protobuf') # get the request as a protobuf string
 Composite composition is performed from a Composite orientation. A `BaseComposite` class
 is subclassed and the `compose` method is implemented.
 ```python
-class Composite(BaseComposite):
+class MyComposite(BaseComposite):
     def compose(self):
         # Compose the Composite
 ```
 The compose method can also declare itself as performing async io:
 ```python
-class Composite(BaseComposite):
+class MyAsyncComposite(BaseComposite):
     async def compose(self):
         # Compose the Composite using async io when needed
 ```
@@ -266,7 +266,7 @@ Each resource in the list is the following RequiredResource class:
 
 ### Conditions
 
-The `BaseCompsite.conditions`, `Resource.conditions`, and `RequiredResource.conditions` fields
+The `BaseComposite.conditions`, `Resource.conditions`, and `RequiredResource.conditions` fields
 are maps of that entity's status conditions array, with the map key being the condition type.
 The fields are read only for `Resource.conditions` and `RequiredResource.conditions`.
 
@@ -307,7 +307,7 @@ metadata:
   name: composite-example
 spec:
   composite: |
-    class Composite(BaseComposite):
+    class HelloComposite(BaseComposite):
       def compose(self):
         self.status.composite = 'Hello, World!'
 ```
@@ -349,7 +349,7 @@ spec:
       apiVersion: pythonic.fn.fortra.com/v1alpha1
       kind: Composite
       composite: |
-        class Composite(BaseComposite):
+        class GreetingComposite(BaseComposite):
           def compose(self):
             self.status.greeting = f"Hello, {self.spec.who}!"
 ```
@@ -362,7 +362,7 @@ metadata:
   annotations:
     render.crossplane.io/runtime: Development
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.0.7
+  package: ghcr.io/fortra/function-pythonic:v0.0.9
 ```
 In one terminal session, run function-pythonic:
 ```shell
@@ -422,7 +422,7 @@ Then, in your Composition:
       kind: Composite
       composite: |
         from example.pythonic import features
-        class Composite(BaseComposite):
+        class FetureComposite(BaseComposite):
             def compose(self):
                 anything = features.anything()
     ...
@@ -464,7 +464,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.0.7
+  package: ghcr.io/fortra/function-pythonic:v0.0.9
   runtimeConfigRef:
     name: function-pythonic
 ---
@@ -496,17 +496,17 @@ rules:
 - apiGroups:
   - ''
   resources:
-  - events
-  verbs:
-  - create
-- apiGroups:
-  - ''
-  resources:
   - configmaps
   verbs:
   - list
   - watch
   - patch
+- apiGroups:
+  - ''
+  resources:
+  - events
+  verbs:
+  - create
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

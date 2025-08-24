@@ -22,7 +22,7 @@ request:
               id: random-bucket-id
   input:
     composite: |
-      class Composite(BaseComposite):
+      class RequiredsComposite(BaseComposite):
         def compose(self):
           buckets = self.requireds.bucket('s3.aws.upbound.io/v1beta1', 'Bucket', name=f"my-awesome-{self.spec.environment}-bucket")
           for ix, bucket in enumerate(buckets):
