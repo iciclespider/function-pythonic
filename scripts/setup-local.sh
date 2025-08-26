@@ -196,7 +196,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.0.9
+  package: ghcr.io/fortra/function-pythonic:v0.0.10
   runtimeConfigRef:
     apiVersion: pkg.crossplane.io/v1beta1
     kind: DeploymentRuntimeConfig

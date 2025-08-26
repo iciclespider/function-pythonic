@@ -89,7 +89,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                     return response
                 for field in dir(module):
                     value = getattr(module, field)
-                    if inspect.isclass(value) and issubclass(value, BaseComposite):
+                    if inspect.isclass(value) and issubclass(value, BaseComposite) and value != BaseComposite:
                         if clazz:
                             logger.error('Composite script has multiple BaseComposite classes')
                             crossplane.function.response.fatal(response, 'Composite script has multiple BaseComposite classes')

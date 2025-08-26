@@ -1,6 +1,7 @@
 request:
   input:
     composite: |
+      from crossplane.pythonic import BaseComposite
       class DoNothingComposite(BaseComposite):
         def compose(self):
           pass
