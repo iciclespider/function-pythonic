@@ -147,10 +147,10 @@ class Message:
             else:
                 name = str(self._key)
             if key is not None:
-                if key.isidentifier():
-                    name += f".{key}"
+                if '.' in key:
+                    name += f"[{key}]"
                 else:
-                    name += f"['{key}']"
+                    name += f".{key}"
             return name
         if key is not None:
             return str(key)
@@ -294,10 +294,10 @@ class MapMessage:
             else:
                 name = str(self._key)
             if key is not None:
-                if key.isidentifier():
-                    name += f".{key}"
+                if '.' in key:
+                    name += f"[{key}]"
                 else:
-                    name += f"['{key}']"
+                    name += f".{key}"
             return name
         if key is not None:
             return str(key)
@@ -638,10 +638,10 @@ class Values:
                     if isinstance(key, int):
                         name += f"[{key}]"
                     else:
-                        if key.isidentifier():
-                            name += f".{key}"
+                        if '.' in key:
+                            name += f"[{key}]"
                         else:
-                            name += f"['{key}']"
+                            name += f".{key}"
             return name
         if key is not None:
             return str(key)

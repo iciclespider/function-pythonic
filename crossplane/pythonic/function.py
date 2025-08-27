@@ -236,10 +236,15 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                 ('request', 'extra_resources', None, 'items', 'resource'),
                 ('response', 'desired', 'resources', None, 'resource'),
         ):
-            if len(values) <= len(name):
-                for ix, value in enumerate(values):
-                    if value and value != name[ix] and not name[ix].startswith(f"{value}["):
-                       break
+            if len(values) < len(name):
+                ix = 0
+                for iv, value in enumerate(values):
+                    if value:
+                        if value != name[ix]:
+                            if not name[ix].startswith(f"{values[iv]}[") or iv+1 >= len(values) or values[iv+1]:
+                                break
+                            continue
+                    ix += 1
                 else:
                     ix = 0
                     for value in values:
@@ -251,7 +256,6 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                                 del name[ix]
                             else:
                                 name[ix] = name[ix][len(value):]
-                                ix += 1
                         else:
                             ix += 1
                     break
