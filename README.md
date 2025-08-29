@@ -366,7 +366,7 @@ spec:
 ```
 In one terminal session, run function-pythonic:
 ```shell
-$ function-pythonic --insecure --debug
+$ function-pythonic --insecure --debug --render-unknowns
 [2025-08-21 15:32:37.966] grpc._cython.cygrpc  [DEBUG   ] Using AsyncIOEngine.POLLER as I/O engine
 ```
 In another terminal session, render the Composite:

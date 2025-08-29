@@ -1,0 +1,16 @@
+request:
+  input:
+    step: pytest
+    composite: |
+      class ComposeInstantiateException(BaseComposite):
+        pass
+
+response:
+  meta:
+    ttl: null
+  context: null
+  desired: null
+  conditions: null
+  results:
+  - message: 'Compose exceptiion: NotImplementedError'
+    severity: 1

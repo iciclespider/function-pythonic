@@ -25,6 +25,7 @@ request:
             forProvider:
               serverId: abcdef
   input:
+    step: pytest
     composite: |
       apiVersion = 'dbforpostgresql.azure.upbound.io/v1beta1'
       class UnknownsWarningComposite(BaseComposite):

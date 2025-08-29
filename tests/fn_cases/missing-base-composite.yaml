@@ -1,0 +1,15 @@
+request:
+  input:
+    step: pytest
+    composite: |
+      pass
+
+response:
+  meta:
+    ttl: null
+  context: null
+  desired: null
+  conditions: null
+  results:
+  - message: Composite script does not have a BaseComposite class
+    severity: 1

@@ -1,5 +1,6 @@
 request:
   input:
+    step: pytest
     composite: tests.fn_cases.clazz.TestComposite
 
 response:

@@ -1,0 +1,20 @@
+request:
+  input:
+    step: pytest
+    composite: |
+      class OneComposite(BaseComposite):
+        def compose(self):
+          pass
+      class TwoComposite(BaseComposite):
+        def compose(self):
+          pass
+
+response:
+  meta:
+    ttl: null
+  context: null
+  desired: null
+  conditions: null
+  results:
+  - message: Composite script has multiple BaseComposite classes
+    severity: 1

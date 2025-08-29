@@ -16,6 +16,7 @@ request:
               status: 'False'
               lastTransitionTime: '2023-11-03T09:07:31Z'
   input:
+    step: pytest
     composite: |
       apiVersion = 'dbforpostgresql.azure.upbound.io/v1beta1'
       class UnknownsInfoComposite(BaseComposite):
@@ -45,11 +46,11 @@ response:
             forProvider:
               storageMb: 32768
   conditions:
-  - type: ResourcesComposed
-    status: 3
+  - status: 3
+    type: ResourcesComposed
     reason: DesiredUnknowns
     message: 'Desired resources with unknowns: flexServerConfig'
   results:
-  - message: 'Desired resources with unknowns: flexServerConfig'
+  - severity: 3
+    message: 'Desired resources with unknowns: flexServerConfig'
     reason: DesiredUnknowns
-    severity: 3

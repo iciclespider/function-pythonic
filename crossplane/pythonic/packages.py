@@ -1,6 +1,5 @@
 
 import base64
-import importlib
 import logging
 import pathlib
 import sys
@@ -10,8 +9,8 @@ import kopf
 
 GRPC_SERVER = None
 GRPC_RUNNER = None
-PACKAGE_LABEL = {'function-pythonic.package': kopf.PRESENT}
 PACKAGES_DIR = None
+PACKAGE_LABEL = {'function-pythonic.package': kopf.PRESENT}
 
 
 def operator(grpc_server, grpc_runner, packages_secrets, packages_namespaces, packages_dir):
@@ -46,95 +45,43 @@ async def cleanup(**_):
 @kopf.on.create('', 'v1', 'configmaps', labels=PACKAGE_LABEL)
 @kopf.on.resume('', 'v1', 'configmaps', labels=PACKAGE_LABEL)
 async def create(body, logger, **_):
-    package_dir, package = get_package_dir(body)
+    package_dir = get_package_dir(body, logger)
     if package_dir:
-        package_dir.mkdir(parents=True, exist_ok=True)
         secret = body['kind'] == 'Secret'
-        invalidate = False
         for name, text in body.get('data', {}).items():
-            package_file = package_dir / name
-            if secret:
-                package_file.write_bytes(base64.b64decode(text.encode('utf-8')))
-            else:
-                package_file.write_text(text)
-            if package_file.suffixes == ['.py']:
-                module = '.'.join(package + [package_file.stem])
-                GRPC_RUNNER.invalidate_module(module)
-                logger.info(f"Created module: {module}")
-            else:
-                logger.info(f"Created file: {'/'.join(package + [name])}")
+            package_file_write(package_dir, name, secret, text, 'Created', logger)
 
 
 @kopf.on.update('', 'v1', 'configmaps', labels=PACKAGE_LABEL)
 async def update(body, old, logger, **_):
-    old_package_dir, old_package = get_package_dir(old)
+    old_package_dir = get_package_dir(old)
     if old_package_dir:
         old_data = old.get('data', {})
     else:
         old_data = {}
     old_names = set(old_data.keys())
-    package_dir, package = get_package_dir(body, logger)
+    package_dir = get_package_dir(body, logger)
     if package_dir:
-        package_dir.mkdir(parents=True, exist_ok=True)
         secret = body['kind'] == 'Secret'
         for name, text in body.get('data', {}).items():
-            package_file = package_dir / name
             if package_dir == old_package_dir and text == old_data.get(name, None):
                 action = 'Unchanged'
             else:
-                if secret:
-                    package_file.write_bytes(base64.b64decode(text.encode('utf-8')))
-                else:
-                    package_file.write_text(text)
                 action = 'Updated' if package_dir == old_package_dir and name in old_names else 'Created'
-            if package_file.suffixes == ['.py']:
-                module = '.'.join(package + [package_file.stem])
-                if action != 'Unchanged':
-                    GRPC_RUNNER.invalidate_module(module)
-                logger.info(f"{action} module: {module}")
-            else:
-                logger.info(f"{action} file: {'/'.join(package + [name])}")
+            package_file_write(package_dir, name, secret, text, action, logger)
             if package_dir == old_package_dir:
                 old_names.discard(name)
     if old_package_dir:
         for name in old_names:
-            package_file = old_package_dir / name
-            package_file.unlink(missing_ok=True)
-            if package_file.suffixes == ['.py']:
-                module = '.'.join(old_package + [package_file.stem])
-                GRPC_RUNNER.invalidate_module(module)
-                logger.info(f"Removed module: {module}")
-            else:
-                logger.info(f"Removed file: {'/'.join(old_package + [name])}")
-        while old_package and old_package_dir.is_dir() and not list(old_package_dir.iterdir()):
-            old_package_dir.rmdir()
-            module = '.'.join(old_package)
-            GRPC_RUNNER.invalidate_module(module)
-            logger.info(f"Removed package: {module}")
-            old_package_dir = old_package_dir.parent
-            old_package.pop()
+            package_file_unlink(old_package_dir, name, 'Removed', logger)
 
 
 @kopf.on.delete('', 'v1', 'configmaps', labels=PACKAGE_LABEL)
 async def delete(old, logger, **_):
-    package_dir, package = get_package_dir(old)
+    package_dir = get_package_dir(old)
     if package_dir:
         for name in old.get('data', {}).keys():
-            package_file = package_dir / name
-            package_file.unlink(missing_ok=True)
-            if package_file.suffixes == ['.py']:
-                module = '.'.join(package + [package_file.stem])
-                GRPC_RUNNER.invalidate_module(module)
-                logger.info(f"Deleted module: {module}")
-            else:
-                logger.info(f"Deleted file: {'/'.join(package + [name])}")
-        while package and package_dir.is_dir() and not list(package_dir.iterdir()):
-            package_dir.rmdir()
-            module = '.'.join(package)
-            GRPC_RUNNER.invalidate_module(module)
-            logger.info(f"Deleted package: {module}")
-            package_dir = package_dir.parent
-            package.pop()
+            package_file_unlink(package_dir, name, 'Deleted', logger)
 
 
 def get_package_dir(body, logger=None):
@@ -142,16 +89,60 @@ def get_package_dir(body, logger=None):
     if package is None:
         if logger:
             logger.error('function-pythonic.package label is missing')
-        return None, None
+        return None
     package_dir = PACKAGES_DIR
-    if package == '':
-        package = []
-    else:
-        package = package.split('.')
-        for segment in package:
+    if package:
+        for segment in package.split('.'):
             if not segment.isidentifier():
                 if logger:
                     logger.error('Package has invalid package name: %s', package)
-                return None, None
+                return None
             package_dir = package_dir / segment
-    return package_dir, package
+    return package_dir
+
+
+def package_file_write(package_dir, name, secret, text, action, logger):
+    package_file = package_dir / name
+    if action != 'Unchanged':
+        package_file.parent.mkdir(parents=True, exist_ok=True)
+        if secret:
+            package_file.write_bytes(base64.b64decode(text.encode('utf-8')))
+        else:
+            package_file.write_text(text)
+    module, name = package_file_name(package_file)
+    if module:
+        if action != 'Unchanged':
+            GRPC_RUNNER.invalidate_module(name)
+        logger.info(f"{action} module: {name}")
+    else:
+        logger.info(f"{action} file: {name}")
+
+
+def package_file_unlink(package_dir, name, action, logger):
+    package_file = package_dir / name
+    package_file.unlink(missing_ok=True)
+    module, name = package_file_name(package_file)
+    if module:
+        GRPC_RUNNER.invalidate_module(name)
+        logger.info(f"{action} module: {name}")
+    else:
+        logger.info(f"{action} file: {name}")
+    package_dir = package_file.parent
+    while (
+            package_dir.is_relative_to(PACKAGES_DIR)
+            and package_dir.is_dir()
+            and not list(package_dir.iterdir())
+    ):
+        package_dir.rmdir()
+        module = str(package_dir.relative_to(PACKAGES_DIR)).replace('/', '.')
+        if module != '.':
+            GRPC_RUNNER.invalidate_module(module)
+            logger.info(f"{action} package: {module}")
+        package_dir = package_dir.parent
+
+
+def package_file_name(package_file):
+    name = str(package_file.relative_to(PACKAGES_DIR))
+    if name.endswith('.py'):
+        return True, name[:-3].replace('/', '.')
+    return False, name

@@ -1,0 +1,14 @@
+request:
+  input:
+    step: pytest
+    composite: tests.fn_cases.clazz.NotComposite
+
+response:
+  meta:
+    ttl: null
+  context: null
+  desired: null
+  conditions: null
+  results:
+  - message: tests.fn_cases.clazz.NotComposite is not a subclass of BaseComposite
+    severity: 1

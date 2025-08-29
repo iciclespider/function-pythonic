@@ -214,3 +214,4 @@ __marimo__/
 crossplane/pythonic/__version__.py
 pocs/
 pythonic-packages/
+tests/protobuf/pytest_pb2*

@@ -1,5 +1,6 @@
 request:
   input:
+    step: pytest
     composite: |
       class BucketComposite(BaseComposite):
         def compose(self):

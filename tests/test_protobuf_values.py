@@ -61,20 +61,29 @@ def test_unkown():
     assert value._isList
 
 def test_yaml():
-    value = protobuf.Yaml('''
+    yaml = '''\
 a: 1
 b: 2
-''')
+'''
+    value = protobuf.Yaml(yaml)
     assert isinstance(value, protobuf.Values)
     assert value._isMap
     assert len(value) == 2
-    value = protobuf.Yaml('''
+    assert str(value) == yaml
+    assert format(value) == yaml
+    assert format(value, 'yaml') == yaml
+    
+    yaml = '''\
 - 1
 - 2
-''')
+'''
+    value = protobuf.Yaml(yaml)
     assert isinstance(value, protobuf.Values)
     assert value._isList
     assert len(value) == 2
+    assert str(value) == yaml
+    assert format(value) == yaml
+    assert format(value, 'yaml') == yaml
     value = protobuf.Yaml('test')
     assert isinstance(value, str)
     value = protobuf.Yaml('1')
@@ -83,24 +92,26 @@ b: 2
     assert isinstance(value, float)
 
 def test_json():
-    value = protobuf.Json('''
+    json = '''\
 {
-    "a": 1,
-    "b": 2
-}
-''')
+  "a": 1,
+  "b": 2
+}'''
+    value = protobuf.Json(json)
     assert isinstance(value, protobuf.Values)
     assert value._isMap
     assert len(value) == 2
-    value = protobuf.Json('''
+    assert format(value, 'json') == json
+    json = '''\
 [
-    1,
-    2
-]
-''')
+  1,
+  2
+]'''
+    value = protobuf.Json(json)
     assert isinstance(value, protobuf.Values)
     assert value._isList
     assert len(value) == 2
+    assert format(value, 'json') == json    
     value = protobuf.Json('"test"')
     assert isinstance(value, str)
     value = protobuf.Json('1')
@@ -147,6 +158,8 @@ def test_values_map():
     assert values == values
     assert hash(values) == hash(values)
     assert values._getUnknowns
+    assert values == values
+
 
 def test_values_list():
     values = protobuf.List(
@@ -188,6 +201,7 @@ def test_values_list():
     assert values == values
     assert hash(values) == hash(values)
     assert values._getUnknowns
+    assert values == values
 
 def test_create_child():
     map = protobuf.Unknown()

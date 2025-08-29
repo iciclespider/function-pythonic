@@ -1,0 +1,18 @@
+request:
+  observed:
+    composite:
+      resource:
+        apiVersion: pythonic.fortra.com/v1alpha1
+        kind: Composite
+  input:
+    step: pytest
+
+response:
+  meta:
+    ttl: null
+  context: null
+  desired: null
+  conditions: null
+  results:
+  - message: Missing spec "composite"
+    severity: 1

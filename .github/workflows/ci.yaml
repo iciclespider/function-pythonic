@@ -15,7 +15,7 @@ on:
 env:
   # Common versions
   PYTHON_VERSION: '3.13.7' # TODO: Used?
-  HATCH_VERSION: '1.12.0'
+  HATCH_VERSION: '1.14.2'
   DOCKER_BUILDX_VERSION: 'v0.26.1'
 
   # These environment variables are important to the Crossplane CLI install.sh
@@ -52,7 +52,7 @@ jobs:
   #         python-version: ${{ env.PYTHON_VERSION }}
 
   #     - name: Setup Hatch
-  #       run: pipx install hatch==1.14.1
+  #       run: pipx install hatch==${{ env.HATCH_VERSION }}
 
   #     - name: Lint
   #       run: hatch run lint:check
@@ -69,7 +69,7 @@ jobs:
         python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Setup Hatch
-      run: pipx install hatch==1.14.1
+      run: pipx install hatch==${{ env.HATCH_VERSION }}
 
     - name: Run Unit Tests
       run: hatch run test:ci

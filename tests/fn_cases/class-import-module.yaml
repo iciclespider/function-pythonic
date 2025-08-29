@@ -1,0 +1,14 @@
+request:
+  input:
+    step: pytest
+    composite: missing.TestComposite
+
+response:
+  meta:
+    ttl: null
+  context: null
+  desired: null
+  conditions: null
+  results:
+  - message: "Import module exceptiion: No module named 'missing'"
+    severity: 1

@@ -1,0 +1,13 @@
+request:
+  observed:
+    composite:
+      resource:
+        apiVersion: pythonic.fortra.com/v1alpha1
+        kind: Composite
+        spec:
+          composite: |
+            class DoNothingComposite(BaseComposite):
+              def compose(self):
+                pass
+  input:
+    step: pytest

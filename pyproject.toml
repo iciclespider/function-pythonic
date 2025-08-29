@@ -51,14 +51,15 @@ only-include = [
 ]
 
 [tool.hatch.envs.default]
+features = ["packages"]
 type = "virtual"
 path = ".venv-default"
 dependencies = ["ipython==9.1.0"]
 packages = ["crossplane"]
 [tool.hatch.envs.default.scripts]
 production = "python -m crossplane.pythonic.main --insecure"
-development = "python -m crossplane.pythonic.main --insecure --debug"
-packages = "python -m crossplane.pythonic.main --insecure --debug --packages --packages-secrets"
+development = "python -m crossplane.pythonic.main --insecure --debug --render-unknowns"
+packages = "python -m crossplane.pythonic.main --insecure --debug --render-unknowns --packages --packages-secrets"
 
 [tool.hatch.envs.lint]
 type = "virtual"
@@ -73,6 +74,7 @@ check = "ruff check crossplane tests && ruff format --diff crossplane tests"
 type = "virtual"
 path = ".venv-test"
 dependencies = [
+  "grpcio-tools==1.74.0",
   "pytest==8.4.1",
   "pytest-asyncio==1.1.0",
   "pytest-cov==6.2.1",

@@ -83,16 +83,16 @@ class Message:
             value = None
         if value is None and field.has_default_value:
             value = field.default_value
-        if field.type == field.TYPE_MESSAGE:
+        if field.label == field.LABEL_REPEATED:
+            if field.type == field.TYPE_MESSAGE and field.message_type.GetOptions().map_entry:
+                value = MapMessage(self, key, field.message_type.fields_by_name['value'], value, self._readOnly)
+            else:
+                value = RepeatedMessage(self, key, field, value, self._readOnly)
+        elif field.type == field.TYPE_MESSAGE:
             if field.message_type.name == 'Struct':
                 value = Values(self, key, value, Values.Type.MAP, self._readOnly)
             elif field.message_type.name == 'ListValue':
                 value = Values(self, key, value, Values.Type.LIST, self._readOnly)
-            elif field.label == field.LABEL_REPEATED:
-                if field.message_type.GetOptions().map_entry:
-                    value = MapMessage(self, key, field.message_type, value, self._readOnly)
-                else:
-                    value = RepeatedMessage(self, key, field.message_type, value, self._readOnly)
             else:
                 value = Message(self, key, field.message_type, value, self._readOnly)
         self._cache[key] = value
@@ -202,15 +202,15 @@ class Message:
         if key not in self._descriptor.fields_by_name:
             raise AttributeError(obj=self, name=key)
         if self._message is not None:
-            del self._message[key]
+            self._message.ClearField(key)
             self._cache.pop(key, None)
 
 
 class MapMessage:
-    def __init__(self, parent, key, descriptor, messages, readOnly=False):
+    def __init__(self, parent, key, field, messages, readOnly=False):
         self.__dict__['_parent'] = parent
         self.__dict__['_key'] = key
-        self.__dict__['_field'] = descriptor.fields_by_name['value']
+        self.__dict__['_field'] = field
         self.__dict__['_messages'] = messages
         self.__dict__['_readOnly'] = readOnly
         self.__dict__['_cache'] = {}
@@ -232,11 +232,6 @@ class MapMessage:
                 value = Values(self, key, value, Values.Type.MAP, self._readOnly)
             elif self._field.message_type.name == 'ListValue':
                 value = Values(self, key, value, Values.Type.LIST, self._readOnly)
-            elif self._field.label == self._field.LABEL_REPEATED:
-                if self._field.message_type.GetOptions().map_entry:
-                    value = MapMessage(self, key, self._field.message_type, value, self._readOnly)
-                else:
-                    value = RepeatedMessage(self, key, self._field.message_type, value, self._readOnly)
             else:
                 value = Message(self, key, self._field.message_type, value, self._readOnly)
         elif self._field.type == self._field.TYPE_BYTES and isinstance(value, bytes):
@@ -266,8 +261,11 @@ class MapMessage:
     def __eq__(self, other):
         if not isinstance(other, MapMessage):
             return False
-        if self._descriptor.full_name != other._descriptor.full_name:
+        if self._field.type != other._field.type:
             return False
+        if self._field.type == self._field.TYPE_MESSAGE:
+            if self._field.message_type.full_name != other._field.message_type.full_name:
+                return False
         if self._messages is None:
             return other._messages is None
         elif other._messages is None:
@@ -349,10 +347,10 @@ class MapMessage:
 
 
 class RepeatedMessage:
-    def __init__(self, parent, key, descriptor, messages, readOnly=False):
+    def __init__(self, parent, key, field, messages, readOnly=False):
         self._parent = parent
         self._key = key
-        self._descriptor = descriptor
+        self._field = field
         self._messages = messages
         self._readOnly = readOnly
         self._cache = {}
@@ -361,10 +359,20 @@ class RepeatedMessage:
         if key in self._cache:
             return self._cache[key]
         if self._messages is None or key >= len(self._messages):
-            message = None
+            value = None
         else:
-            message = self._messages[key]
-        value = Message(self, key, self._descriptor, message, self._readOnly)
+            value = self._messages[key]
+        if value is None and self._field.has_default_value:
+            value = self._field.default_value
+        if self._field.type == self._field.TYPE_MESSAGE:
+            if self._field.message_type.name == 'Struct':
+                value = Values(self, key, value, Values.Type.MAP, self._readOnly)
+            elif self._field.message_type.name == 'ListValue':
+                value = Values(self, key, value, Values.Type.LIST, self._readOnly)
+            else:
+                value = Message(self, key, self._field.message_type, value, self._readOnly)
+        elif self._field.type == self._field.TYPE_BYTES and isinstance(value, bytes):
+            value = value.decode('utf-8')
         self._cache[key] = value
         return value
 
@@ -394,8 +402,11 @@ class RepeatedMessage:
     def __eq__(self, other):
         if not isinstance(other, RepeatedMessage):
             return False
-        if self._descriptor.full_name != other._descriptor.full_name:
+        if self._field.type != other._field.type:
             return False
+        if self._field.type == self._field.TYPE_MESSAGE:
+            if self._field.message_type.full_name != other._field.message_type.full_name:
+                return False
         if self._messages is None:
             return other._messages is None
         elif other._messages is None:
@@ -440,7 +451,7 @@ class RepeatedMessage:
             raise ValueError(f"{self._readOnly} is read only")
         if self._messages is None:
             self.__dict__['_messages'] = self._parent._create_child(self._key)
-        self._messages.Clear()
+        self._messages.clear()
         self._cache.clear()
         for arg in args:
             self.append(arg)
@@ -451,22 +462,23 @@ class RepeatedMessage:
             raise ValueError(f"{self._readOnly} is read only")
         if self._messages is None:
             self._messages = self._parent._create_child(self._key)
-        if key == append:
-            key = len(self._messages)
-        elif key < 0:
+        if key < 0:
             key = len(self._messages) + key
-        while key >= len(self._messages):
-            self._messages.add()
         if isinstance(message, Message):
             message = message._message
-        self._messages[key] = message
+        if self._field.type == self._field.TYPE_BYTES and isinstance(message, str):
+            message = message.encode('utf-8')
+        if key >= len(self._messages):
+            self._messages.append(message)
+        else:
+            self._messages[key] = message
         self._cache.pop(key, None)
 
     def __delitem__(self, key):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
-        if self._values is not None:
-            del self._values[key]
+        if self._messages is not None:
+            del self._messages[key]
             self._cache.pop(key, None)
 
     def append(self, message=None):
@@ -513,7 +525,7 @@ class Values:
         if isinstance(key, str):
             if not self._isMap:
                 if not self._isUnknown:
-                    raise ValueError(f"Invalid key, must be a str for maps: {key}")
+                    raise ValueError(f"Invalid key, must be a int for lists: {key}")
                 self.__dict__['_type'] = self.Type.MAP
             if self._values is None or key not in self._values:
                 struct_value = None
@@ -522,7 +534,7 @@ class Values:
         elif isinstance(key, int):
             if not self._isList:
                 if not self._isUnknown:
-                    raise ValueError(f"Invalid key, must be an int for lists: {key}")
+                    raise ValueError(f"Invalid key, must be a str for maps: {key}")
                 self.__dict__['_type'] = self.Type.LIST
             if self._values is None or key >= len(self._values):
                 struct_value = None
@@ -849,7 +861,7 @@ class Values:
         return unknowns
 
     def _patchUnknowns(self, patches):
-        for key in [key for key in self._unknowns.keys()]:
+        for key in list(self._unknowns.keys()):
             self[key] = patches[key]
         if self._isMap:
             for key, value in self:
@@ -863,6 +875,18 @@ class Values:
                     patch = patches[ix]
                     if isinstance(patch, Values) and patch._type == value._type and len(patch):
                         value._patchUnknowns(patch)
+
+    def _renderUnknowns(self, trimFullName):
+        for key, unknown in list(self._unknowns.items()):
+            self[key] = f"UNKNOWN:{trimFullName(unknown._fullName())}"
+        if self._isMap:
+            for key, value in self:
+                if isinstance(value, Values) and len(value):
+                    value._renderUnknowns(trimFullName)
+        elif self._isList:
+            for ix, value in enumerate(self):
+                if isinstance(value, Values) and len(value):
+                    value._renderUnknowns(trimFullName)
 
 
 def _formatObject(object, spec):
@@ -901,7 +925,7 @@ class _JSONEncoder(json.JSONEncoder):
             return '<<UNEXPECTED>>'
         if isinstance(object, datetime.datetime):
             return object.isoformat()
-        return super(JSONEncoder, self).default(object)
+        return super(_JSONEncoder, self).default(object)
 
 
 class _Dumper(yaml.SafeDumper):

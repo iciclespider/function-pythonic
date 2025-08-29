@@ -1,28 +1,15 @@
 """A Crossplane composition function."""
 
 import asyncio
-import base64
-import builtins
 import importlib
 import inspect
 import logging
 import sys
 
 import grpc
-import crossplane.function.response
 from crossplane.function.proto.v1 import run_function_pb2 as fnv1
 from crossplane.function.proto.v1 import run_function_pb2_grpc as grpcv1
 from .. import pythonic
-
-builtins.BaseComposite = pythonic.BaseComposite
-builtins.append = pythonic.append
-builtins.Map = pythonic.Map
-builtins.List = pythonic.List
-builtins.Unknown = pythonic.Unknown
-builtins.Yaml = pythonic.Yaml
-builtins.Json = pythonic.Json
-builtins.B64Encode = pythonic.B64Encode
-builtins.B64Decode = pythonic.B64Decode
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +17,10 @@ logger = logging.getLogger(__name__)
 class FunctionRunner(grpcv1.FunctionRunnerService):
     """A FunctionRunner handles gRPC RunFunctionRequests."""
 
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, renderUnknowns=False):
         """Create a new FunctionRunner."""
         self.debug = debug
+        self.renderUnknowns = renderUnknowns
         self.clazzes = {}
 
     def invalidate_module(self, module):
@@ -46,9 +34,8 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
     ) -> fnv1.RunFunctionResponse:
         try:
             return await self.run_function(request)
-        except:
-            logger.exception('Exception thrown in run fuction')
-            raise
+        except Exception as e:
+            return self.fatal(request, logger, 'RunFunction', e)
 
     async def run_function(self, request):
         composite = request.observed.composite.resource
@@ -56,26 +43,21 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         name.append(composite['kind'])
         name.append(composite['metadata']['name'])
         logger = logging.getLogger('.'.join(name))
-        if 'iteration' in request.context:
-            request.context['iteration'] = request.context['iteration'] + 1
-        else:
-            request.context['iteration'] = 1
-        logger.debug(f"Starting compose, {ordinal(request.context['iteration'])} pass")
-
-        response = crossplane.function.response.to(request)
 
         if composite['apiVersion'] == 'pythonic.fortra.com/v1alpha1' and composite['kind'] == 'Composite':
-            if 'composite' not in composite['spec']:
-                logger.error('Missing spec "composite"')
-                crossplane.function.response.fatal(response, 'Missing spec "composite"')
-                return response
+            if 'spec' not in composite or 'composite' not in composite['spec']:
+                return self.fatal(request, logger, 'Missing spec "composite"')
             composite = composite['spec']['composite']
         else:
             if 'composite' not in request.input:
-                logger.error('Missing input "composite"')
-                crossplane.function.response.fatal(response, 'Missing input "composite"')
-                return response
+                return self.fatal(request, logger, 'Missing input "composite"')
             composite = request.input['composite']
+
+        # Ideally this is something the Function API provides
+        if 'step' in request.input:
+            step = request.input['step']
+        else:
+            step = str(hash(composite))
 
         clazz = self.clazzes.get(composite)
         if not clazz:
@@ -84,81 +66,67 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                 try:
                     exec(composite, module.__dict__)
                 except Exception as e:
-                    logger.exception('Exec exception')
-                    crossplane.function.response.fatal(response, f"Exec exception: {e}")
-                    return response
+                    return self.fatal(request, logger, 'Exec', e)
                 for field in dir(module):
                     value = getattr(module, field)
-                    if inspect.isclass(value) and issubclass(value, BaseComposite) and value != BaseComposite:
+                    if inspect.isclass(value) and issubclass(value, pythonic.BaseComposite) and value != pythonic.BaseComposite:
                         if clazz:
-                            logger.error('Composite script has multiple BaseComposite classes')
-                            crossplane.function.response.fatal(response, 'Composite script has multiple BaseComposite classes')
-                            return response
+                            return self.fatal(request, logger, 'Composite script has multiple BaseComposite classes')
                         clazz = value
                 if not clazz:
-                    logger.error('Composite script does not have have a BaseComposite class')
-                    crossplane.function.response.fatal(response, 'Composite script does have have a BaseComposite class')
-                    return response
+                    return self.fatal(request, logger, 'Composite script does not have a BaseComposite class')
             else:
                 composite = composite.rsplit('.', 1)
                 if len(composite) == 1:
-                    logger.error(f"Composite class name does not include module: {composite[0]}")
-                    crossplane.function.response.fatal(response, f"Composite class name does not include module: {composite[0]}")
-                    return response
+                    return self.fatal(request, logger, f"Composite class name does not include module: {composite[0]}")
                 try:
                     module = importlib.import_module(composite[0])
                 except Exception as e:
-                    logger.error(str(e))
-                    crossplane.function.response.fatal(response, f"Import module exception: {e}")
-                    return response
+                    return self.fatal(request, logger, 'Import module', e)
                 clazz = getattr(module, composite[1], None)
                 if not clazz:
-                    logger.error(f"{composite[0]} did not define: {composite[1]}")
-                    crossplane.function.response.fatal(response, f"{composite[0]} did not define: {composite[1]}")
-                    return response
+                    return self.fatal(request, logger, f"{composite[0]} does not define: {composite[1]}")
                 composite = '.'.join(composite)
                 if not inspect.isclass(clazz):
-                    logger.error(f"{composite} is not a class")
-                    crossplane.function.response.fatal(response, f"{composite} is not a class")
-                    return response
-                if not issubclass(clazz, BaseComposite):
-                    logger.error(f"{composite} is not a subclass of BaseComposite")
-                    crossplane.function.response.fatal(response, f"{composite} is not a subclass of BaseComposite")
-                    return response
+                    return self.fatal(request, logger, f"{composite} is not a class")
+                if not issubclass(clazz, pythonic.BaseComposite):
+                    return self.fatal(request, logger, f"{composite} is not a subclass of BaseComposite")
             self.clazzes[composite] = clazz
 
         try:
-            composite = clazz(request, response, logger)
+            composite = clazz(request, logger)
         except Exception as e:
-            logger.exception('Instatiate exception')
-            crossplane.function.response.fatal(response, f"Instatiate exception: {e}")
-            return response
+            return self.fatal(request, logger, 'Instantiate', e)
+
+        step = composite.context._pythonic[step]
+        iteration = (step.iteration or 0) + 1
+        step.iteration = iteration
+        composite.context.iteration = iteration
+        logger.debug(f"Starting compose, {ordinal(len(composite.context._pythonic))} step, {ordinal(iteration)} pass")
 
         try:
             result = composite.compose()
             if asyncio.iscoroutine(result):
                 await result
         except Exception as e:
-            logger.exception('Compose exception')
-            crossplane.function.response.fatal(response, f"Compose exception: {e}")
-            return response
+            return self.fatal(request, logger, 'Compose', e)
 
         requested = []
         for name, required in composite.requireds:
             if required.apiVersion and required.kind:
-                r = Map(apiVersion=required.apiVersion, kind=required.kind)
+                r = pythonic.Map(apiVersion=required.apiVersion, kind=required.kind)
                 if required.namespace:
                     r.namespace = required.namespace
                 if required.matchName:
                     r.matchName = required.matchName
                 for key, value in required.matchLabels:
                     r.matchLabels[key] = value
-                if r != composite.context._requireds[name]:
-                    composite.context._requireds[name] = r
+                if r != step.requireds[name]:
+                    step.requireds[name] = r
                     requested.append(name)
         if requested:
             logger.info(f"Requireds requested: {','.join(requested)}")
-            return response
+            return composite.response._message
 
         unknownResources = []
         warningResources = []
@@ -187,6 +155,8 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                             logger.debug(f'Desired unknown: {destination} = {source}')
                 if resource.observed:
                     resource.desired._patchUnknowns(resource.observed)
+                elif self.renderUnknowns:
+                    resource.desired._renderUnknowns(self.trimFullName)
                 else:
                     del composite.resources[name]
 
@@ -227,7 +197,29 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                         resource.ready = True
 
         logger.info('Completed compose')
-        return response
+        return composite.response._message
+
+    def fatal(self, request, logger, message, exception=None):
+        if exception:
+            message += ' exceptiion'
+            logger.exception(message)
+            m = str(exception)
+            if not m:
+                m = exception.__class__.__name__
+            message += ': ' + m
+        else:
+            logger.error(message)
+        return fnv1.RunFunctionResponse(
+            meta=fnv1.ResponseMeta(
+                tag=request.meta.tag,
+            ),
+            results=[
+                fnv1.Result(
+                    severity=fnv1.SEVERITY_FATAL,
+                    message=message,
+                )
+            ]
+        )
 
     def trimFullName(self, name):
         name = name.split('.')
@@ -272,4 +264,13 @@ def ordinal(ix):
 
 
 class Module:
-    pass
+    def __init__(self):
+        self.BaseComposite = pythonic.BaseComposite
+        self.append = pythonic.append
+        self.Map = pythonic.Map
+        self.List = pythonic.List
+        self.Unknown = pythonic.Unknown
+        self.Yaml = pythonic.Yaml
+        self.Json = pythonic.Json
+        self.B64Encode = pythonic.B64Encode
+        self.B64Decode = pythonic.B64Decode

@@ -1,0 +1,15 @@
+
+syntax = "proto3";
+
+import "google/protobuf/struct.proto";
+
+message Message {
+  string string = 1;
+  google.protobuf.Struct struct = 2;
+  google.protobuf.ListValue list = 3;
+  map<string, string> map_string = 4;
+  map<string, google.protobuf.Struct> map_map = 5;
+  map<string, google.protobuf.ListValue> map_list = 6;
+  repeated string list_string = 7;
+  repeated google.protobuf.Struct list_map = 8;
+}

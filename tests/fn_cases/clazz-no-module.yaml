@@ -1,0 +1,14 @@
+request:
+  input:
+    step: pytest
+    composite: TestComposite
+
+response:
+  meta:
+    ttl: null
+  context: null
+  desired: null
+  conditions: null
+  results:
+  - message:  'Composite class name does not include module: TestComposite'
+    severity: 1

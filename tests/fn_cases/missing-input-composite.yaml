@@ -1,0 +1,13 @@
+request:
+  input:
+    step: pytest
+
+response:
+  meta:
+    ttl: null
+  context: null
+  desired: null
+  conditions: null
+  results:
+  - message: Missing input "composite"
+    severity: 1

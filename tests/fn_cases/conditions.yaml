@@ -20,6 +20,7 @@ request:
               status: 'True'
               lastTransitionTime: '2023-11-03T09:07:31Z'
   input:
+    step: pytest
     composite: |
       class ConditionsComposite(BaseComposite):
         def compose(self):
@@ -82,4 +83,8 @@ response:
   - type: DatabaseReady
     reason: Ready
     message: Database is ready
+    status: 2
+  - type: ResourcesComposed
+    reason: AllComposed
+    message: All resources are composed
     status: 2

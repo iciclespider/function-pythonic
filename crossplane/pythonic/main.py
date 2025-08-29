@@ -92,6 +92,11 @@ class Main:
             action='store_true',
             help='Allow oversized protobuf messages'
         )
+        parser.add_argument(
+            '--render-unknowns',
+            action='store_true',
+            help='Render resources with unknowns, useful during local develomment'
+        )
         args = parser.parse_args()
         if not args.tls_certs_dir and not args.insecure:
             print('Either --tls-certs-dir or --insecure must be specified', file=sys.stderr)
@@ -117,7 +122,7 @@ class Main:
                 api_implementation._c_module.SetAllowOversizeProtos(True)
 
         grpc.aio.init_grpc_aio()
-        grpc_runner = function.FunctionRunner(args.debug)
+        grpc_runner = function.FunctionRunner(args.debug, args.render_unknowns)
         grpc_server = grpc.aio.server()
         grpcv1.add_FunctionRunnerServiceServicer_to_server(grpc_runner, grpc_server)
         if args.insecure:

@@ -1,0 +1,18 @@
+request:
+  input:
+    step: pytest
+    composite: |
+      class InstantiateException(BaseComposite):
+        def __init__(self, request, logger):
+          super(InstantiateException, self).__init__(request, logger)
+          foo = bar
+
+response:
+  meta:
+    ttl: null
+  context: null
+  desired: null
+  conditions: null
+  results:
+  - message: "Instantiate exceptiion: name 'bar' is not defined"
+    severity: 1
