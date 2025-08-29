@@ -21,6 +21,7 @@ request:
             atProvider:
               id: random-bucket-id
   input:
+    step: pytest
     composite: |
       class RequiredsComposite(BaseComposite):
         def compose(self):
@@ -38,11 +39,13 @@ request:
 
 response:
   context:
-    _requireds:
-      bucket:
-        apiVersion: s3.aws.upbound.io/v1beta1
-        kind: Bucket
-        matchName: my-awesome-dev-bucket
+    _pythonic:
+      pytest:
+        requireds:
+          bucket:
+            apiVersion: s3.aws.upbound.io/v1beta1
+            kind: Bucket
+            matchName: my-awesome-dev-bucket
   requirements:
     extra_resources:
       bucket:

@@ -20,6 +20,7 @@ request:
               status: 'True'
               lastTransitionTime: '2023-11-03T09:07:31Z'
   input:
+    step: pytest
     composite: |
       class ConditionsComposite(BaseComposite):
         def compose(self):

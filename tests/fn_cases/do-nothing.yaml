@@ -1,5 +1,6 @@
 request:
   input:
+    step: pytest
     composite: |
       from crossplane.pythonic import BaseComposite
       class DoNothingComposite(BaseComposite):

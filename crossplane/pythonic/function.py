@@ -56,12 +56,6 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         name.append(composite['kind'])
         name.append(composite['metadata']['name'])
         logger = logging.getLogger('.'.join(name))
-        if 'iteration' in request.context:
-            request.context['iteration'] = request.context['iteration'] + 1
-        else:
-            request.context['iteration'] = 1
-        logger.debug(f"Starting compose, {ordinal(request.context['iteration'])} pass")
-
         response = crossplane.function.response.to(request)
 
         if composite['apiVersion'] == 'pythonic.fortra.com/v1alpha1' and composite['kind'] == 'Composite':
@@ -76,6 +70,12 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                 crossplane.function.response.fatal(response, 'Missing input "composite"')
                 return response
             composite = request.input['composite']
+
+        # Ideally this is something the Function API provides
+        if 'step' in request.input:
+            step = request.input['step']
+        else:
+            step = str(hash(composite))
 
         clazz = self.clazzes.get(composite)
         if not clazz:
@@ -134,6 +134,12 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             crossplane.function.response.fatal(response, f"Instatiate exception: {e}")
             return response
 
+        step = composite.context._pythonic[step]
+        iteration = (step.iteration or 0) + 1
+        step.iteration = iteration
+        composite.context.iteration = iteration
+        logger.debug(f"Starting compose, {ordinal(len(composite.context._pythonic))} step, {ordinal(iteration)} pass")
+
         try:
             result = composite.compose()
             if asyncio.iscoroutine(result):
@@ -153,8 +159,8 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                     r.matchName = required.matchName
                 for key, value in required.matchLabels:
                     r.matchLabels[key] = value
-                if r != composite.context._requireds[name]:
-                    composite.context._requireds[name] = r
+                if r != step.requireds[name]:
+                    step.requireds[name] = r
                     requested.append(name)
         if requested:
             logger.info(f"Requireds requested: {','.join(requested)}")

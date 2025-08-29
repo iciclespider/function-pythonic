@@ -15,6 +15,7 @@ request:
             scalar2: text
             scalar3: 123
   input:
+    step: pytest
     composite: |
       class YamlComposite(BaseComposite):
         def compose(self):

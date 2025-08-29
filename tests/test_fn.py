@@ -43,6 +43,11 @@ async def test_run_function(fn_case):
             },
         },
         'context': {
+            '_pythonic': {
+                'pytest': {
+                    'iteration': 1,
+                },
+            },
             'iteration': 1,
         },
         'desired': {},
