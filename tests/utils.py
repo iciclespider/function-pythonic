@@ -21,13 +21,15 @@ def _yaml_clean(values):
 
 def message_merge(message, values):
     for field, value in values.items():
+        descriptor = message.DESCRIPTOR.fields_by_name.get(field)
+        if not descriptor:
+            print('no field', message, field, value)
         if isinstance(value, (dict, list, tuple)):
             current = getattr(message, field)
             if isinstance(value, dict):
                 if isinstance(current, Struct):
                     map_merge(current, value)
                 else:
-                    descriptor = message.DESCRIPTOR.fields_by_name.get(field)
                     if descriptor.label == descriptor.LABEL_REPEATED:
                         if descriptor.message_type.GetOptions().map_entry:
                             message_map_merge(descriptor, current, value)
@@ -48,7 +50,11 @@ def message_merge(message, values):
                     else:
                         message_merge(current, value)
             continue
-        setattr(message, field, value)
+        try:
+            setattr(message, field, value)
+        except AttributeError:
+            print(message, field, value, descriptor.type, descriptor.TYPE_BYTES)
+            raise
 
 def message_map_merge(descriptor, message, values):
     descriptor = descriptor.message_type.fields_by_name['value']
@@ -81,6 +87,10 @@ def map_merge(message, values):
                 else:
                     list_merge(current, value)
                 continue
+        elif value is None:
+            if field in message:
+                del message[field]
+            continue
         message[field] = value
 
 def list_merge(message, values):
@@ -96,75 +106,6 @@ def list_merge(message, values):
                 message[ix] = value
         else:
             message.append(value)
-
-
-def message_defaults(message, defaults):
-    for field, value in defaults.items():
-        if isinstance(value, (dict, list, tuple)):
-            #if field in message:
-            current = getattr(message, field)
-            if isinstance(value, dict):
-                if isinstance(current, Struct):
-                    map_defaults(current, value)
-                else:
-                    descriptor = message.DESCRIPTOR.fields_by_name.get(field)
-                    if descriptor.label == descriptor.LABEL_REPEATED:
-                        if descriptor.message_type.GetOptions().map_entry:
-                            message_map_defaults(descriptor, current, value)
-                        else:
-                            message_list_defaults(current, value)
-                    else:
-                        message_defaults(current, value)
-            else:
-                list_defaults(current, value)
-        else:
-            setattr(message, field, value)
-
-def message_map_defaults(descriptor, message, values):
-    descriptor = descriptor.message_type.fields_by_name['value']
-    for field, value in values.items():
-        if isinstance(value, (dict, list, tuple)):
-            current = message[field]
-            if isinstance(current, Struct):
-                map_defaults(current, value)
-            else:
-                message_defaults(current, value)
-        else:
-            if field not in message:
-                message[field] = value
-
-def message_list_defaults(message, values):
-    for ix, value in enumerate(values):
-        if ix < len(message):
-            message_defaults(message[ix], value)
-        else:
-            message_defaults(message.add(), value)
-
-def map_defaults(message, defaults):
-    for field, value in defaults.items():
-        current = message.get(field, None)
-        if isinstance(value, (dict, list, tuple)):
-            if current is not None:
-                if isinstance(value, dict):
-                    map_defaults(current, value)
-                else:
-                    list_defaults(current, value)
-                continue
-        if current is None:
-            message[field] = value
-
-def list_defaults(message, defaults):
-    for ix, value in enumerate(defaults):
-        if ix < len(message):
-            if isinstance(value, (dict, list, tuple)):
-                current = message[ix]
-                if isinstance(value, dict):
-                    map_defaults(current, value)
-                else:
-                    list_defaults(current, value)
-        else:
-            message.append(value)
-
 
 def message_dict(message):
     result = {}

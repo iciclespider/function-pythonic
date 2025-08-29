@@ -1,5 +1,6 @@
 
 import datetime
+from google.protobuf.duration_pb2 import Duration
 from crossplane.function.proto.v1 import run_function_pb2 as fnv1
 
 from . import protobuf
@@ -9,8 +10,18 @@ _notset = object()
 
 
 class BaseComposite:
-    def __init__(self, request, response, logger):
+    def __init__(self, request, logger):
         self.request = protobuf.Message(None, 'request', request.DESCRIPTOR, request, 'Function Request')
+        response = fnv1.RunFunctionResponse(
+            meta=fnv1.ResponseMeta(
+                tag=request.meta.tag,
+                ttl=Duration(
+                    seconds=60,
+                ),
+            ),
+            desired=request.desired,
+            context=request.context,
+        )
         self.response = protobuf.Message(None, 'response', response.DESCRIPTOR, response)
         self.logger = logger
         self.credentials = Credentials(self.request)
@@ -36,11 +47,23 @@ class BaseComposite:
 
     @property
     def ttl(self):
+        if self.response.meta.ttl.nanos:
+            return float(self.response.meta.ttl.seconds) + (float(self.response.meta.ttl.nanos) / 1000000000.0)
         return self.response.meta.ttl.seconds
 
     @ttl.setter
     def ttl(self, ttl):
-        self.response.meta.ttl.seconds = ttl    
+        if isinstance(ttl, int):
+            self.response.meta.ttl.seconds = ttl
+            self.response.meta.ttl.nanos = 0
+        elif isinstance(ttl, float):
+            self.response.meta.ttl.seconds = int(ttl)
+            if ttl.is_integer():
+                self.response.meta.ttl.nanos = 0
+            else:
+                self.response.meta.ttl.nanos = int((ttl -  self.response.meta.ttl.seconds) * 1000000000)
+        else:
+            raise ValueError('ttl must be an int or float')
 
     @property
     def ready(self):
@@ -73,19 +96,43 @@ class Credentials:
         return self[key]
 
     def __getitem__(self, key):
-        return self._request.credentials[key].credentials_data.data
+        return Credential(self._request.credentials[key])
 
     def __bool__(self):
-        return bool(_request.credentials)
+        return bool(self._request.credentials)
 
     def __len__(self):
         return len(self._request.credentials)
 
     def __contains__(self, key):
-        return key in _request.credentials
+        return key in self._request.credentials
 
     def __iter__(self):
         for key, resource in self._request.credentials:
+            yield key, self[key]
+
+
+class Credential:
+    def __init__(self, credential):
+        self.__dict__['_credential'] = credential
+
+    def __getattr__(self, key):
+        return self[key]
+
+    def __getitem__(self, key):
+        return self._credential.credential_data.data[key]
+
+    def __bool__(self):
+        return bool(self._credential.credential_data.data)
+
+    def __len__(self):
+        return len(self._credential.credential_data.data)
+
+    def __contains__(self, key):
+        return key in self._credential.credential_data.data
+
+    def __iter__(self):
+        for key, resource in self._credential.credential_data.data:
             yield key, self[key]
 
 
@@ -587,7 +634,7 @@ class Events:
     def __getitem__(self, key):
         if key >= len(self._results):
             return Event()
-        return Event(self._results[ix])
+        return Event(self._results[key])
 
     def __iter__(self):
         for ix in range(len(self._results)):

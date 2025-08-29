@@ -1,0 +1,15 @@
+request:
+  input:
+    step: pytest
+    composite: |
+      import missing
+
+response:
+  meta:
+    ttl: null
+  context: null
+  desired: null
+  conditions: null
+  results:
+  - message: "Exec exceptiion: No module named 'missing'"
+    severity: 1

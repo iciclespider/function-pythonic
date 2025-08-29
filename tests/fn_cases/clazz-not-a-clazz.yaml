@@ -1,0 +1,14 @@
+request:
+  input:
+    step: pytest
+    composite: tests.fn_cases.clazz.NotClazz
+
+response:
+  meta:
+    ttl: null
+  context: null
+  desired: null
+  conditions: null
+  results:
+  - message: tests.fn_cases.clazz.NotClazz is not a class
+    severity: 1

@@ -51,6 +51,7 @@ only-include = [
 ]
 
 [tool.hatch.envs.default]
+features = ["packages"]
 type = "virtual"
 path = ".venv-default"
 dependencies = ["ipython==9.1.0"]
@@ -73,6 +74,7 @@ check = "ruff check crossplane tests && ruff format --diff crossplane tests"
 type = "virtual"
 path = ".venv-test"
 dependencies = [
+  "grpcio-tools==1.74.0",
   "pytest==8.4.1",
   "pytest-asyncio==1.1.0",
   "pytest-cov==6.2.1",

@@ -10,10 +10,10 @@ configMapGenerator:
   name: pythonic-aks
   options:
     labels:
-      function-pythonic.package: ''
+      function-pythonic.package: 'aks'
   files:
-  - kubernetescluster.py
-  - resourcegroup.py
+  - aks/kubernetescluster.py
+  - aks/resourcegroup.py
 
 resources:
 - composition.yaml

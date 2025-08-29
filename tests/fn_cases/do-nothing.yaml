@@ -1,6 +1,8 @@
 request:
   input:
+    step: pytest
     composite: |
+      # Test that BaseComposite does not cound as a subclass
       from crossplane.pythonic import BaseComposite
       class DoNothingComposite(BaseComposite):
         def compose(self):

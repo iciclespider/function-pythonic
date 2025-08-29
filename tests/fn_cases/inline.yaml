@@ -10,6 +10,7 @@ request:
           username: test-user-0
           password: hxt1nwu9vmt@qtb3HVW
   input:
+    step: pytest
     composite: |
       class InlineComposite(BaseComposite):
         def compose(self):

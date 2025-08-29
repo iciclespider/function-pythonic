@@ -1,0 +1,17 @@
+request:
+  input:
+    step: pytest
+    composite: |
+      class ComposeInstantiateException(BaseComposite):
+        def compose(self):
+          foo = bar
+
+response:
+  meta:
+    ttl: null
+  context: null
+  desired: null
+  conditions: null
+  results:
+  - message: "Compose exceptiion: name 'bar' is not defined"
+    severity: 1

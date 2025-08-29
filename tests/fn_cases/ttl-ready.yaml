@@ -1,0 +1,24 @@
+request:
+  input:
+    step: pytest
+    composite: |
+      class DoNothingComposite(BaseComposite):
+        def compose(self):
+          self.ttl = self.ttl + 1
+          self.ttl = self.ttl + 1.0
+          self.ttl = self.ttl + 1.5
+          self.ttl = self.ttl + 1
+          self.ready = None
+          self.ready = not self.ready
+          self.ready = False
+          self.ready = not self.ready
+          self.ready = not self.ready
+
+response:
+  meta:
+    ttl:
+      seconds: 64
+      nanos: 500000000
+  desired:
+    composite:
+      ready: 2
