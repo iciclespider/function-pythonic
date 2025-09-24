@@ -19,16 +19,16 @@ spec:
       composite: |
         class Composite(BaseComposite):
           def compose(self):
-            self.conditions.TestCondition(False, 'InstallFail', 'failed to install')
-            self.conditions.ConditionTrue(True, 'TrueCondition', 'we are true', True)
-            self.conditions.DatabaseReady(True, 'Ready', 'Database is ready')
+            self.conditions.TestCondition('InstallFail', 'failed to install', False)
+            self.conditions.ConditionTrue('TrueCondition', 'we are true', True, True)
+            self.conditions.DatabaseReady('Ready', 'Database is ready', True)
 
             # Alternative ways to configure cconditions
-            #self.conditions.TestCondition2(status=False, reason='InstallFail2', message='failed to install 2')
-            #self.conditions['TestCondition3'](status=False, reason='InstallFail3', message='failed to install 3')
-            #self.conditions.TestCondition4.status = False
+            #self.conditions.TestCondition2(reason='InstallFail2', message='failed to install 2', status=False)
+            #self.conditions['TestCondition3'](reason='InstallFail3', message='failed to install 3', status=False)
             #self.conditions.TestCondition4.reason = 'InstallFail4'
             #self.conditions.TestCondition4.message = 'failed to install 4'            
+            #self.conditions.TestCondition4.status = False
 
   - step: automatically-detect-ready-composed-resources
     functionRef:
