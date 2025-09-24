@@ -99,7 +99,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             return self.fatal(request, logger, 'Instantiate', e)
 
         step = composite.context._pythonic[step]
-        iteration = (step.iteration or 0) + 1
+        iteration = int(step.iteration) + 1
         step.iteration = iteration
         composite.context.iteration = iteration
         logger.debug(f"Starting compose, {ordinal(len(composite.context._pythonic))} step, {ordinal(iteration)} pass")

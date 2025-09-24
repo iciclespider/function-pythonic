@@ -49,7 +49,7 @@ class BaseComposite:
     def ttl(self):
         if self.response.meta.ttl.nanos:
             return float(self.response.meta.ttl.seconds) + (float(self.response.meta.ttl.nanos) / 1000000000.0)
-        return self.response.meta.ttl.seconds
+        return int(self.response.meta.ttl.seconds)
 
     @ttl.setter
     def ttl(self, ttl):
@@ -61,7 +61,7 @@ class BaseComposite:
             if ttl.is_integer():
                 self.response.meta.ttl.nanos = 0
             else:
-                self.response.meta.ttl.nanos = int((ttl -  self.response.meta.ttl.seconds) * 1000000000)
+                self.response.meta.ttl.nanos = int((ttl - int(self.response.meta.ttl.seconds)) * 1000000000)
         else:
             raise ValueError('ttl must be an int or float')
 
@@ -78,7 +78,7 @@ class BaseComposite:
     def ready(self, ready):
         if ready:
             ready = fnv1.Ready.READY_TRUE
-        elif ready == None or (isinstance(ready, protobuf.Values) and ready._isUnknown):
+        elif ready == None or (isinstance(ready, protobuf.Value) and ready._isUnknown):
             ready = fnv1.Ready.READY_UNSPECIFIED
         else:
             ready = fnv1.Ready.READY_FALSE
@@ -265,7 +265,7 @@ class Resource:
     def ready(self, ready):
         if ready:
             ready = fnv1.Ready.READY_TRUE
-        elif ready == None or (isinstance(ready, protobuf.Values) and ready._isUnknown):
+        elif ready == None or (isinstance(ready, protobuf.Value) and ready._isUnknown):
             ready = fnv1.Ready.READY_UNSPECIFIED
         else:
             ready = fnv1.Ready.READY_FALSE
@@ -487,7 +487,7 @@ class Condition(protobuf.ProtobufValue):
             condition.status = fnv1.Status.STATUS_CONDITION_TRUE
         elif status == None:
             condition.status = fnv1.Status.STATUS_CONDITION_UNKNOWN
-        elif isinstance(status, protobuf.Values) and status._isUnknown:
+        elif isinstance(status, protobuf.Value) and status._isUnknown:
             condition.status = fnv1.Status.STATUS_CONDITION_UNSPECIFIED
         else:
             condition.status = fnv1.Status.STATUS_CONDITION_FALSE
@@ -521,7 +521,7 @@ class Condition(protobuf.ProtobufValue):
             if observed.type == self.type:
                 time = observed.lastTransitionTime
                 if time:
-                    return datetime.datetime.fromisoformat(time)
+                    return datetime.datetime.fromisoformat(str(time))
         return None
 
     @property
@@ -534,7 +534,7 @@ class Condition(protobuf.ProtobufValue):
         condition = self._find_condition(True)
         if claim:
             condition.target = fnv1.Target.TARGET_COMPOSITE_AND_CLAIM
-        elif claim == None or (isinstance(claim, protobuf.Values) and claim._isUnknown):
+        elif claim == None or (isinstance(claim, protobuf.Value) and claim._isUnknown):
             condition.target = fnv1.Target.TARGET_UNSPECIFIED
         else:
             condition.target = fnv1.Target.TARGET_COMPOSITE
@@ -711,7 +711,7 @@ class Event:
         if bool(self):
             if claim:
                 self._result.target = fnv1.Target.TARGET_COMPOSITE_AND_CLAIM
-            elif claim == None or (isinstance(claim, protobuf.Values) and claim._isUnknown):
+            elif claim == None or (isinstance(claim, protobuf.Value) and claim._isUnknown):
                 self._result.target = fnv1.Target.TARGET_UNSPECIFIED
             else:
                 self._result.target = fnv1.Target.TARGET_COMPOSITE
