@@ -218,7 +218,7 @@ class Resource:
     @property
     def externalName(self):
         name = self.metadata.annotations['crossplane.io/external-name']
-        if name is None:
+        if not name:
             name = self.observed.metadata.annotations['crossplane.io/external-name']
         return name
 

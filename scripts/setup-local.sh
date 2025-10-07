@@ -44,7 +44,7 @@ kind: Provider
 metadata:
   name: provider-helm
 spec:
-  package: xpkg.crossplane.io/crossplane-contrib/provider-helm:v1.0.3
+  package: xpkg.crossplane.io/crossplane-contrib/provider-helm:v1.0.2
   runtimeConfigRef:
     apiVersion: pkg.crossplane.io/v1beta1
     kind: DeploymentRuntimeConfig
@@ -52,9 +52,10 @@ spec:
 EOF
 
 kubectl apply -f - <<EOF
-apiVersion: helm.crossplane.io/v1beta1
+apiVersion: helm.m.crossplane.io/v1beta1
 kind: ProviderConfig
 metadata:
+  namespace: crossplane-system
   name: default
 spec:
   credentials:
@@ -67,7 +68,7 @@ kind: Provider
 metadata:
   name: provider-kubernetes
 spec:
-  package: xpkg.crossplane.io/crossplane-contrib/provider-kubernetes:v1.0.1
+  package: xpkg.crossplane.io/crossplane-contrib/provider-kubernetes:v1.0.0
   runtimeConfigRef:
     apiVersion: pkg.crossplane.io/v1beta1
     kind: DeploymentRuntimeConfig
@@ -75,9 +76,10 @@ spec:
 EOF
 
 kubectl apply -f - <<EOF
-apiVersion: kubernetes.crossplane.io/v1alpha1
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
 kind: ProviderConfig
 metadata:
+  namespace: crossplane-system
   name: default
 spec:
   credentials:
@@ -124,47 +126,47 @@ subjects:
   name: function-pythonic
 EOF
 
-kubectl delete -f - <<EOF
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  namespace: crossplane-system
-  name: function-pythonic
-rules:
-# Framework: posting the events about the handlers progress/errors.
-- apiGroups:
-  - ''
-  resources:
-  - events
-  verbs:
-  - create
-# Application: watching & handling for the custom resource we declare.
-- apiGroups:
-  - ''
-  resources:
-  - configmaps
-  - secrets
-  verbs:
-  - list
-  - watch
-  - patch
-EOF
+# kubectl delete -f - <<EOF
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: Role
+# metadata:
+#   namespace: crossplane-system
+#   name: function-pythonic
+# rules:
+# # Framework: posting the events about the handlers progress/errors.
+# - apiGroups:
+#   - ''
+#   resources:
+#   - events
+#   verbs:
+#   - create
+# # Application: watching & handling for the custom resource we declare.
+# - apiGroups:
+#   - ''
+#   resources:
+#   - configmaps
+#   - secrets
+#   verbs:
+#   - list
+#   - watch
+#   - patch
+# EOF
 
-kubectl delete -f - <<EOF
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  namespace: crossplane-system
-  name: function-pythonic
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: function-pythonic
-subjects:
-- kind: ServiceAccount
-  namespace: crossplane-system
-  name: function-pythonic
-EOF
+# kubectl delete -f - <<EOF
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: RoleBinding
+# metadata:
+#   namespace: crossplane-system
+#   name: function-pythonic
+# roleRef:
+#   apiGroup: rbac.authorization.k8s.io
+#   kind: Role
+#   name: function-pythonic
+# subjects:
+# - kind: ServiceAccount
+#   namespace: crossplane-system
+#   name: function-pythonic
+# EOF
 
 kubectl apply -f - <<EOF
 apiVersion: pkg.crossplane.io/v1beta1
@@ -182,6 +184,8 @@ spec:
             args:
             - --debug
             - --packages
+            - --pip-install
+            - aiobotocore==v2.24.2
           serviceAccountName: function-pythonic
   serviceAccountTemplate:
     metadata:
@@ -189,6 +193,7 @@ spec:
 EOF
 
 #  package: ghcr.io/fortra/function-pythonic:v0.0.0-20250819201108-49cfb066579f
+#  package: ghcr.io/iciclespider/function-pythonic:v0.0.0-20251007211722-f132f8e3d368
 
 kubectl apply -f - <<EOF
 apiVersion: pkg.crossplane.io/v1
@@ -196,7 +201,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.0.10
+  package: ghcr.io/fortra/function-pythonic:v0.1.1
   runtimeConfigRef:
     apiVersion: pkg.crossplane.io/v1beta1
     kind: DeploymentRuntimeConfig

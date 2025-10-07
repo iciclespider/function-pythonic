@@ -5,4 +5,4 @@ metadata:
   annotations:
     render.crossplane.io/runtime: Development
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.0.10
+  package: ghcr.io/fortra/function-pythonic:v0.1.1
