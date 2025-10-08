@@ -1,0 +1,20 @@
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: aws-upbound-provider-ec2
+spec:
+  package: xpkg.upbound.io/upbound/provider-aws-ec2:v2.1.0
+  runtimeConfigRef:
+    name: provider-aws-upbound
+---
+apiVersion: aws.m.upbound.io/v1beta1
+kind: ClusterProviderConfig
+metadata:
+  name: default
+spec:
+  credentials:
+    secretRef:
+      key: credentials
+      name: aws-credentials
+      namespace: crossplane-system
+    source: Secret

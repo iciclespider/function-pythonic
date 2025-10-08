@@ -1,0 +1,10 @@
+apiVersion: caleb.pythonic.com/v1alpha1
+kind: Network
+metadata:
+  namespace: crossplane-system
+  name: test-network
+spec:
+  region: us-east-1
+  cidr: 10.0.0.0/16
+  tags:
+    'fortra:cloudops': 'owned'

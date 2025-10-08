@@ -1,0 +1,73 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: networks.caleb.pythonic.com
+spec:
+  compositeTypeRef:
+    apiVersion: caleb.pythonic.com/v1alpha1
+    kind: Network
+  mode: Pipeline
+  pipeline:
+
+  - step: render-templates
+    functionRef:
+      name: function-pythonic
+    input:
+      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      kind: Composite
+      composite: |
+        from crossplane.pythonic import BaseComposite
+        from aiobotocore.session import get_session
+
+        class NetworkComposite(BaseComposite):
+          async def compose(self):
+            # Only create the AWS Session if needed
+            self._aws_session = None
+            # Create/Get VPC
+            vpc = await self.compose_vpc()
+
+          async def compose_vpc(self):
+            vpc = self.resources.VPC('ec2.aws.m.upbound.io/v1beta1', 'VPC')
+            vpc.spec.forProvider(
+              region = self.spec.region,
+              cidrBlock = self.spec.cidr,
+              enableDnsHostnames = True,
+              enableDnsSupport = True,
+              tags = self.tags(Name=self.metadata.name),
+            )
+            if not vpc.externalName:
+              async with self.aws_client('ec2') as ec2:
+                vpcs = (await ec2.describe_vpcs(
+                  Filters=[{
+                    'Name': 'tag:Name',
+                    'Values': [str(self.metadata.name)],
+                  }],
+                ))['Vpcs']
+              if vpcs:
+                if len(vpcs) == 1:
+                  vpc.externalName = vpcs[0]['VpcId']
+                else:
+                  self.events.fatal('MultipleResources', f"More than one vpc found for: {self.metadata.name}")
+            self.status.vpcId = vpc.status.atProvider.vpcId
+            return vpc
+
+          def aws_client(self, service):
+            if not self._aws_session:
+              self._aws_session = get_session()
+              self._aws_clients = {}
+            client = self._aws_clients.get(service)
+            if not client:
+              client = self._aws_session.create_client(service, str(self.spec.region))
+              self._aws_clients[service] = client
+            return client
+
+          def tags(self, *args, **kwargs):
+            tags = {}
+            for arg in args:
+              arg = arg.split('=', 1)
+              tags[arg[0].strip()] = arg[1].lstrip()
+            tags.update(kwargs)
+            if self.spec.tags:
+              for key, value in self.spec.tags:
+                tags[key] = value
+            return tags

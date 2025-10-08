@@ -1,0 +1,6 @@
+apiVersion: ec2.aws.m.upbound.io/v1beta1
+kind: VPC
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: VPC
+    crossplane.io/external-name: vpc-0123456789
