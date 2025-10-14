@@ -6,4 +6,5 @@ spec:
   composite: |
     class Composite(BaseComposite):
       def compose(self):
+        self.logger.info('Debug World!')
         self.status.composite = 'Hello, World!'

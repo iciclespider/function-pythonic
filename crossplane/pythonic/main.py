@@ -102,13 +102,6 @@ class Main:
             print('Either --tls-certs-dir or --insecure must be specified', file=sys.stderr)
             sys.exit(1)
 
-        self.configure_logging(args)
-        # enables read only volumes or mismatched uid volumes
-        sys.dont_write_bytecode = True
-        await self.run(args)
-
-    # Allow for independent running of function-pythonic
-    async def run(self, args):
         if args.pip_install:
             import pip._internal.cli.main
             pip._internal.cli.main.main(['install', '--user', *shlex.split(args.pip_install)])
@@ -116,6 +109,13 @@ class Main:
         for path in reversed(args.python_path):
             sys.path.insert(0, str(pathlib.Path(path).expanduser().resolve()))
 
+        self.configure_logging(args)
+        # enables read only volumes or mismatched uid volumes
+        sys.dont_write_bytecode = True
+        await self.run(args)
+
+    # Allow for independent running of function-pythonic
+    async def run(self, args):
         if args.allow_oversize_protos:
             from google.protobuf.internal import api_implementation
             if api_implementation._c_module:
@@ -166,7 +166,7 @@ class Main:
         handler = logging.StreamHandler()
         handler.setFormatter(formatter)
         logger = logging.getLogger()
-        logger.addHandler(handler)
+        logger.handlers = [handler]
         logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
 
 

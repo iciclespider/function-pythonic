@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Package version (e.g. v0.1.0)
+        description: Package version (e.g. v0.1.2)
         required: false
 
 env:

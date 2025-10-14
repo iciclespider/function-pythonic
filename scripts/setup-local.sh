@@ -193,7 +193,8 @@ spec:
 EOF
 
 #  package: ghcr.io/fortra/function-pythonic:v0.0.0-20250819201108-49cfb066579f
-#  package: ghcr.io/iciclespider/function-pythonic:v0.0.0-20251007211722-f132f8e3d368
+#  package: ghcr.io/iciclespider/function-pythonic:v0.0.0-20251014192239-4779a870d7fd
+#  package: ghcr.io/fortra/function-pythonic:v0.1.2
 
 kubectl apply -f - <<EOF
 apiVersion: pkg.crossplane.io/v1
@@ -201,7 +202,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.1.1
+  package: ghcr.io/fortra/function-pythonic:v0.1.2
   runtimeConfigRef:
     apiVersion: pkg.crossplane.io/v1beta1
     kind: DeploymentRuntimeConfig

@@ -41,7 +41,7 @@ class BaseComposite:
         self.kind = self.observed.kind
         self.metadata = self.observed.metadata
         self.spec = self.observed.spec
-        self.status = Status(self.observed.status, self.desired.status)
+        self.status = self.desired.status
         self.conditions = Conditions(observed, self.response)
         self.connection = Connection(observed, desired)
         self.events = Events(self.response)
@@ -217,10 +217,9 @@ class Resource:
 
     @property
     def externalName(self):
-        name = self.metadata.annotations['crossplane.io/external-name']
-        if not name:
-            name = self.observed.metadata.annotations['crossplane.io/external-name']
-        return name
+        if 'crossplane.io/external-name' in self.metadata.annotations:
+            return self.metadata.annotations['crossplane.io/external-name']
+        return self.observed.metadata.annotations['crossplane.io/external-name']
 
     @externalName.setter
     def externalName(self, name):
@@ -407,27 +406,6 @@ class RequiredResource:
 
     def __bool__(self):
         return bool(self.observed)
-
-
-class Status:
-    def __init__(self, observed, desired):
-        self.__dict__['_observed'] = observed
-        self.__dict__['_desired'] = desired
-
-    def __getattr__(self, key):
-        return self[key]
-
-    def __getitem__(self, key):
-        value = self._desired[key]
-        if value is None:
-            value = self._observed[key]
-        return value
-
-    def __setattr__(self, key, value):
-        self[key] = value
-
-    def __setitem__(self, key, value):
-        self._desired[key] = value
 
 
 class Conditions:

@@ -3,7 +3,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.1.1
+  package: ghcr.io/fortra/function-pythonic:v0.1.2
   runtimeConfigRef:
     name: function-pythonic
 ---

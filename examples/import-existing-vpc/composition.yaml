@@ -48,7 +48,7 @@ spec:
                   vpc.externalName = vpcs[0]['VpcId']
                 else:
                   self.events.fatal('MultipleResources', f"More than one vpc found for: {self.metadata.name}")
-            self.status.vpcId = vpc.status.atProvider.vpcId
+            self.status.vpcId = vpc.status.atProvider.id
             return vpc
 
           def aws_client(self, service):
