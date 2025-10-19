@@ -54,12 +54,7 @@ spec:
           def aws_client(self, service):
             if not self._aws_session:
               self._aws_session = get_session()
-              self._aws_clients = {}
-            client = self._aws_clients.get(service)
-            if not client:
-              client = self._aws_session.create_client(service, str(self.spec.region))
-              self._aws_clients[service] = client
-            return client
+            return self._aws_session.create_client(service, str(self.spec.region))
 
           def tags(self, *args, **kwargs):
             tags = {}
