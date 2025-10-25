@@ -123,7 +123,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
 
     def fatal(self, request, logger, message, exception=None):
         if exception:
-            message += ' exceptiion'
+            message += ' exception'
             logger.exception(message)
             m = str(exception)
             if not m:
