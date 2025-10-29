@@ -174,8 +174,8 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                     for destination, source in sorted(dependencies.items()):
                         name = source.split('.')
                         if (len(name) > 5 and
-                            name[0] == 'request' and
-                            name[1] == 'observed' and
+                            name[0] in ('request', 'response') and
+                            name[1] in ('observed', 'desired') and
                             name[2] == 'resources' and
                             name[4] == 'resource'
                         ):
