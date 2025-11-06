@@ -169,6 +169,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                         source = self.trimFullName(source)
                         composite.logger.debug(f"Dependency: {destination} = {source}")
                 if resource.usages or (resource.usages is None and composite.usages):
+                    apiVersion = 'protection.crossplane.io/v1beta1' if composite.metadata.namespace else 'apiextensions.crossplane.io/v1beta1'
                     resources = {}
                     requireds = {}
                     for destination, source in sorted(dependencies.items()):
@@ -198,8 +199,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                         if source.metadata.namespace:
                             name.append(str(source.metadata.namespace))
                         name.append(str(source.observed.metadata.name))
-                        usage = composite.resources['_'.join(name)]('apiextensions.crossplane.io/v1beta1', 'Usage')
-                        #usage = composite.resources['_'.join(name)]('protection.crossplane.io/v1beta1', 'Usage')
+                        usage = composite.resources['_'.join(name)](apiVersion, 'Usage')
                         if resource.metadata.namespace:
                             usage.metadata.namespace = resource.metadata.namespace
                         usage.spec.reason = '\n'.join(dependencies)
@@ -218,8 +218,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                         if source.metadata.namespace:
                             name.append(str(source.metadata.namespace))
                         name.append(str(source.metadata.name))
-                        usage = composite.resources['_'.join(name)]('apiextensions.crossplane.io/v1beta1', 'Usage')
-                        #usage = composite.resources['_'.join(name)]('protection.crossplane.io/v1beta1', 'Usage')
+                        usage = composite.resources['_'.join(name)](apiVersion, 'Usage')
                         if resource.metadata.namespace:
                             usage.metadata.namespace = resource.metadata.namespace
                         usage.spec.reason = '\n'.join(dependencies)

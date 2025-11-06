@@ -25,7 +25,7 @@ spec:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.crossplane.io/v1beta1
+      apiVersion: pythonic.fn.fortra.com/v1alpha1
       kind: Composite
       composite: |
         class VpcComposite(BaseComposite):
@@ -57,7 +57,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.1.2
+  package: ghcr.io/fortra/function-pythonic:v0.1.3
 ```
 ## Composed Resource Dependencies
 
@@ -384,7 +384,7 @@ metadata:
   annotations:
     render.crossplane.io/runtime: Development
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.1.2
+  package: ghcr.io/fortra/function-pythonic:v0.1.3
 ```
 In one terminal session, run function-pythonic:
 ```shell
@@ -486,7 +486,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.1.2
+  package: ghcr.io/fortra/function-pythonic:v0.1.3
   runtimeConfigRef:
     name: function-pythonic
 ---

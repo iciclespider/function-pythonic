@@ -140,12 +140,17 @@ class Credential:
 class Resources:
     def __init__(self, composite):
         self.__dict__['_composite'] = composite
+        self.__dict__['_cache'] = {}
 
     def __getattr__(self, key):
         return self[key]
 
     def __getitem__(self, key):
-        return Resource(self._composite, key)
+        resource = self._cache.get(key)
+        if not resource:
+            resource = Resource(self._composite, key)
+            self._cache[key] = resource
+        return resource
 
     def __bool__(self):
         return bool(self._composite.response.desired.resources)
@@ -165,6 +170,7 @@ class Resources:
 
     def __setitem__(self, key, resource):
         self._composite.response.desired.resources[key].resource = resource
+        self._cache.pop(key, None)
 
     def __delattr__(self, key):
         del self[key]
@@ -172,6 +178,7 @@ class Resources:
     def __delitem__(self, key):
         if key in self._composite.response.desired.resources:
             del self._composite.response.desired.resources[key]
+        self._cache.pop(key, None)
 
 
 class Resource:
@@ -276,12 +283,17 @@ class Resource:
 class Requireds:
     def __init__(self, composite):
         self._composite = composite
+        self._cache = {}
 
     def __getattr__(self, key):
         return self[key]
 
     def __getitem__(self, key):
-        return RequiredResources(self._composite, key)
+        required = self._cache.get(key)
+        if not required:
+            required = RequiredResources(self._composite, key)
+            self._cache[key] = required
+        return required
 
     def __bool__(self):
         return bool(len(self))
@@ -316,6 +328,7 @@ class RequiredResources:
         self.name = name
         self._selector = composite.response.requirements.extra_resources[name]
         self._resources = composite.request.extra_resources[name]
+        self._cache = {}
 
     def __call__(self, apiVersion=_notset, kind=_notset, namespace=_notset, name=_notset, labels=_notset):
         self._selector()
@@ -378,7 +391,11 @@ class RequiredResources:
                     self._selector.match_labels.labels[entry[0]] = entry[1]
 
     def __getitem__(self, ix):
-        return RequiredResource(self.name, ix, self._resources.items[ix])
+        resource = self._cache.get(ix)
+        if not resource:
+            resource = RequiredResource(self.name, ix, self._resources.items[ix])
+            self._cache[ix] = resource
+        return resource
 
     def __bool__(self):
         return bool(self._resources.items)
