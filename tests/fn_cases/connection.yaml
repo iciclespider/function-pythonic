@@ -1,0 +1,55 @@
+request:
+  observed:
+    resources:
+      AccessKey:
+        connection_details:
+          username: access-key-username
+          password: access-key-password
+  input:
+    step: pytest
+    parameters:
+      suffix: test
+    composite: |
+      class Test(BaseComposite):
+        def compose(self):
+          user = self.resources.User('iam.aws.crossplane.io/v1beta1', 'User')
+          user.externalName = 'pmcnerthney-test'
+          user.spec.forProvider = {}
+          key = self.resources.AccessKey('iam.aws.crossplane.io/v1beta1', 'AccessKey')
+          key.spec.forProvider.userName = user.externalName
+          key.spec.writeConnectionSecretToRef.namespace = 'default'
+          key.spec.writeConnectionSecretToRef.name = 'accesskey-test'
+          self.connection.constant = 'constant-test'
+          self.connection.parameter = self.parameters.suffix
+          for name, value in key.connection:
+            self.connection[f"{name}-{self.parameters.suffix}"] = value
+          self.connection.client_secret = key.connection.client_secret
+
+response:
+  desired:
+    composite:
+      connection_details:
+        constant: constant-test
+        parameter: test
+        password-test: access-key-password
+        username-test: access-key-username
+    resources:
+      User:
+        resource:
+          apiVersion: iam.aws.crossplane.io/v1beta1
+          kind: User
+          metadata:
+            annotations:
+              crossplane.io/external-name: pmcnerthney-test
+          spec:
+            forProvider: {}
+      AccessKey:
+        resource:
+          apiVersion: iam.aws.crossplane.io/v1beta1
+          kind: AccessKey
+          spec:
+            forProvider:
+              userName: pmcnerthney-test
+            writeConnectionSecretToRef:
+              namespace: default
+              name: accesskey-test

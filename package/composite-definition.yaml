@@ -20,6 +20,9 @@ spec:
           spec:
             type: object
             properties:
+              parameters:
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
               composite:
                 type: string
                 description: 'A Python module that defines a class with the signature: class Composite(BaseComposite)'

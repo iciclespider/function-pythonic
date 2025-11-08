@@ -203,8 +203,8 @@ The BaseComposite class provides the following fields for manipulating the Compo
 | self.spec | Map | The composite observed spec |
 | self.status | Map | The composite desired and observed status, read from observed if not in desired |
 | self.conditions | Conditions | The composite desired and observed conditions, read from observed if not in desired |
-| self.connection | Connection | The composite desired and observed connection detials, read from observed if not in desired |
 | self.events | Events | Returned events against the Composite and optionally on the Claim |
+| self.connection | Connection | The composite desired and observed connection detials, read from observed if not in desired |
 | self.ready | Boolean | The composite desired ready state |
 
 The BaseComposite also provides access to the following Crossplane Function level features:
@@ -214,6 +214,7 @@ The BaseComposite also provides access to the following Crossplane Function leve
 | self.request | Message | Low level direct access to the RunFunctionRequest message |
 | self.response | Message | Low level direct access to the RunFunctionResponse message |
 | self.logger | Logger | Python logger to log messages to the running function stdout |
+| self.parameters | Map | The configured step parameters |
 | self.ttl | Integer | Get or set the response TTL, in seconds |
 | self.credentials | Credentials | The request credentials |
 | self.context | Map | The response context, initialized from the request context |
@@ -551,6 +552,41 @@ The above RBAC permission can then be per namespace RBAC Role permissions.
 Secrets can also be used in an identical manner as ConfigMaps by enabling the
 `--packages-secrets` command line option. Secrets permissions need to be
 added to the above RBAC configuration.
+
+## Step Parameters
+
+Step specific parameters can be configured to be used by the composite
+implementation. This is useful when setting the composite to the python class.
+For example:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: crossplane-system
+  name: example-pythonic
+  labels:
+    function-pythonic.package: example.pythonic
+data:
+  features.py: |
+    from crossplane.pythonic import BaseComposite
+    class GreetingComposite(BaseComposite):
+        def compose(self):
+            cm = self.resources.ConfigMap('v1', 'ConfigMap')
+            cm.data.greeting = f"Hello, {self.parameters.who}!"
+```
+```yaml
+    ...
+    - step: pythonic
+    functionRef:
+      name: function-pythonic
+    input:
+      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      kind: Composite
+      parameters:
+        who: World
+      composite: example.pythonic.features.GreetingComposite
+    ...
+```
 
 ## Filing System Packages
 

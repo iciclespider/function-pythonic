@@ -10,7 +10,7 @@ _notset = object()
 
 
 class BaseComposite:
-    def __init__(self, request, logger):
+    def __init__(self, request, single_use, logger):
         self.request = protobuf.Message(None, 'request', request.DESCRIPTOR, request, 'Function Request')
         response = fnv1.RunFunctionResponse(
             meta=fnv1.ResponseMeta(
@@ -24,6 +24,10 @@ class BaseComposite:
         )
         self.response = protobuf.Message(None, 'response', response.DESCRIPTOR, response)
         self.logger = logger
+        if single_use:
+            self.parameters = self.request.observed.composite.resource.spec.parameters
+        else:
+            self.parameters = self.request.input.parameters
         self.credentials = Credentials(self.request)
         self.context = self.response.context
         self.environment = self.context['apiextensions.crossplane.io/environment']
@@ -43,7 +47,6 @@ class BaseComposite:
         self.spec = self.observed.spec
         self.status = self.desired.status
         self.conditions = Conditions(observed, self.response)
-        self.connection = Connection(observed, desired)
         self.events = Events(self.response)
 
     @property
@@ -65,6 +68,16 @@ class BaseComposite:
                 self.response.meta.ttl.nanos = int((ttl - int(self.response.meta.ttl.seconds)) * 1000000000)
         else:
             raise ValueError('ttl must be an int or float')
+
+    @property
+    def connection(self):
+        return self.response.desired.composite.connection_details
+
+    @connection.setter
+    def connection(self, connection):
+        self.response.desired.composite.connection_details()
+        for key, value in connection:
+            self.response.desired.composite.connection_details[key] = value
 
     @property
     def ready(self):
@@ -189,7 +202,7 @@ class Resource:
         self.observed = observed.resource
         self.desired = desired.resource
         self.conditions = Conditions(observed)
-        self.connection = Connection(observed)
+        self.connection = observed.connection_details
         self.unknownsFatal = None
         self.autoReady = None
         self.usages = None
@@ -552,38 +565,6 @@ class Condition(protobuf.ProtobufValue):
         condition = fnv1.Condition()
         condition.type = self.type
         return self._conditions._response.conditions.append(condition)
-
-
-class Connection:
-    def __init__(self, observed, desired=None):
-        self.__dict__['_observed'] = observed
-        self.__dict__['_desired'] = desired
-
-    def __bool__(self):
-        if self._desired is not None and len(self._desired.connection_details) > 0:
-            return True
-        if self._observed is not None and len(self._observed.connection_details) > 0:
-            return True
-        return False
-
-    def __getattr__(self, key):
-        return self[key]
-
-    def __getitem__(self, key):
-        value = None
-        if self._desired is not None and key in self._desired.connection_details:
-            value = self._desired.connection_details[key]
-        if value is None and key in self._observed.connection_details:
-            value = self._observed.connection_details[key]
-        return value
-
-    def __setattr__(self, key, value):
-        self[key] = value
-
-    def __setitem__(self, key, value):
-        if self._desired is None:
-            raise ValueError('Connection is read only')
-        self._desired.connection_details[key] = value
 
 
 class Events:

@@ -29,6 +29,9 @@ spec:
           step:
             type: string
             description: Optional step name used in logging
+          parameters:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
           composite:
             type: string
             description: 'A Python module that defines a class with the signature: class Composite(BaseComposite)'

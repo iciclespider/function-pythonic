@@ -1,0 +1,20 @@
+request:
+  input:
+    step: pytest
+    parameters:
+      hello: world
+    composite: |
+      class Composite(BaseComposite):
+        def compose(self):
+          cm = self.resources.ConfigMap('v1', 'ConfigMap')
+          cm.data = self.parameters
+
+response:
+  desired:
+    resources:
+      ConfigMap:
+        resource:
+          apiVersion: v1
+          kind: ConfigMap
+          data:
+            hello: world

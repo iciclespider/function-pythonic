@@ -47,10 +47,12 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         if composite['apiVersion'] == 'pythonic.fortra.com/v1alpha1' and composite['kind'] == 'Composite':
             if 'spec' not in composite or 'composite' not in composite['spec']:
                 return self.fatal(request, logger, 'Missing spec "composite"')
+            single_use = True
             composite = composite['spec']['composite']
         else:
             if 'composite' not in request.input:
                 return self.fatal(request, logger, 'Missing input "composite"')
+            single_use = False
             composite = request.input['composite']
 
         # Ideally this is something the Function API provides
@@ -94,7 +96,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             self.clazzes[composite] = clazz
 
         try:
-            composite = clazz(request, logger)
+            composite = clazz(request, single_use, logger)
         except Exception as e:
             return self.fatal(request, logger, 'Instantiate', e)
 

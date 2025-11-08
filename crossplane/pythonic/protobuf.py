@@ -336,9 +336,12 @@ class MapMessage:
             message = message._value
         elif isinstance(message, Value):
             message = message._raw
-        if self._field.type == self._field.TYPE_BYTES and isinstance(message, str):
-            message = message.encode('utf-8')
-        self._messages[key] = message
+        if message is _Unknown:
+            self._messages.pop(key, None)
+        else:
+            if self._field.type == self._field.TYPE_BYTES and isinstance(message, str):
+                message = message.encode('utf-8')
+            self._messages[key] = message
         self._cache.pop(key, None)
 
     def __delattr__(self, key):
@@ -477,13 +480,18 @@ class RepeatedMessage:
             message = message._value
         elif isinstance(message, Value):
             message = message._raw
-        if self._field.type == self._field.TYPE_BYTES and isinstance(message, str):
-            message = message.encode('utf-8')
-        if key >= len(self._messages):
-            self._messages.append(message)
+        if message is _Unknown:
+            if key < len(self._messages):
+                self._messages.pop(key)
+                self._cache.clear()
         else:
-            self._messages[key] = message
-        self._cache.pop(key, None)
+            if self._field.type == self._field.TYPE_BYTES and isinstance(message, str):
+                message = message.encode('utf-8')
+            if key >= len(self._messages):
+                self._messages.append(message)
+            else:
+                self._messages[key] = message
+            self._cache.pop(key, None)
 
     def __delitem__(self, key):
         if self._readOnly:
