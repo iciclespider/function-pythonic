@@ -2,22 +2,22 @@
 name = "crossplane-function-pythonic"
 description = 'A Python centric Crossplane Function'
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.12,<3.15"
 license = "Apache-2.0"
 keywords = []
 authors = [{ name = "Patrick J McNerthney", email = "pat@mcnerthney.com" }]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 
 dynamic = ["version"]
 
 dependencies = [
-  "crossplane-function-sdk-python==0.9.0",
+  "crossplane-function-sdk-python==0.10.0",
   "pyyaml==6.0.3",
 ]
 
@@ -75,7 +75,7 @@ check = "ruff check crossplane tests && ruff format --diff crossplane tests"
 type = "virtual"
 path = ".venv-test"
 dependencies = [
-  "grpcio-tools==1.74.0",
+  "grpcio-tools==1.76.0",
   "pytest==8.4.1",
   "pytest-asyncio==1.1.0",
   "pytest-cov==6.2.1",
