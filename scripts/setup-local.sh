@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 
-helm upgrade --install crossplane --namespace crossplane-system --create-namespace crossplane-stable/crossplane --version v2.0.2
+helm upgrade --install crossplane \
+     --namespace crossplane-system \
+     --create-namespace crossplane-stable/crossplane \
+     --version v2.0.2 \
+     --set 'args={--enable-realtime-compositions=false,--debug}'
 
 kubectl apply -f - <<EOF
 apiVersion: pkg.crossplane.io/v1beta1
@@ -192,9 +196,9 @@ spec:
       name: function-pythonic
 EOF
 
-#  package: ghcr.io/iciclespider/function-pythonic:v0.0.0-20251106175531-78a5b0cd1b50
+#  package: ghcr.io/iciclespider/function-pythonic:v0.0.0-20251204014512-08165a015bbf
 #  package: ghcr.io/fortra/function-pythonic:v0.0.0-20250819201108-49cfb066579f
-#  package: ghcr.io/fortra/function-pythonic:v0.1.3
+#  package: ghcr.io/fortra/function-pythonic:v0.1.4
 
 kubectl apply -f - <<EOF
 apiVersion: pkg.crossplane.io/v1
@@ -202,7 +206,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.1.3
+  package: ghcr.io/fortra/function-pythonic:v0.1.4
   runtimeConfigRef:
     apiVersion: pkg.crossplane.io/v1beta1
     kind: DeploymentRuntimeConfig
