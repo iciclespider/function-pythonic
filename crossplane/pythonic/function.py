@@ -24,10 +24,14 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         self.clazzes = {}
 
     def invalidate_module(self, module):
-        self.clazzes.clear()
-        if module in sys.modules:
-            del sys.modules[module]
+        ix = len(module)
+        while ix > 0:
+            module = module[:ix]
+            if module in sys.modules:
+                del sys.modules[module]
+            ix = module.rfind('.')
         importlib.invalidate_caches()
+        self.clazzes.clear()
 
     async def RunFunction(
         self, request: fnv1.RunFunctionRequest, _: grpc.aio.ServicerContext
