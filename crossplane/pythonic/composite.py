@@ -449,6 +449,32 @@ class Conditions:
     def __getitem__(self, type):
         return Condition(self, type)
 
+    def __bool__(self):
+        if self._response is not None:
+            if self._response.conditions:
+                return True
+        if self._observed.resource.status.conditions:
+            return True
+        return False
+
+    def __len__(self):
+        return len(self._types())
+
+    def __iter__(self):
+        for type in self._types():
+            yield self[type]
+
+    def _types(self):
+        types = set()
+        if self._response is not None:
+            for condition in self._response.conditions:
+                if condition.type:
+                    types.add(str(condition.type))
+        for condition in self._observed.resource.status.conditions:
+            if condition.type:
+                types.add(str(condition.type))
+        return sorted(types)
+
 
 class Condition(protobuf.ProtobufValue):
     def __init__(self, conditions, type):
