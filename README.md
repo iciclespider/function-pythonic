@@ -57,7 +57,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.1.3
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.1.5
 ```
 ## Composed Resource Dependencies
 
@@ -385,7 +385,7 @@ metadata:
   annotations:
     render.crossplane.io/runtime: Development
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.1.3
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.1.5
 ```
 In one terminal session, run function-pythonic:
 ```shell
@@ -487,7 +487,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: ghcr.io/fortra/function-pythonic:v0.1.3
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.1.5
   runtimeConfigRef:
     name: function-pythonic
 ---
