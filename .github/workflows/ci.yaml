@@ -26,11 +26,11 @@ env:
   # This CI job will automatically push new builds to xpkg.upbound.io if the
   # XPKG_ACCESS_ID and XPKG_TOKEN secrets are set in the GitHub respository (or
   # organization) settings. Create a token at https://accounts.upbound.io.
-  # XPKG_ACCESS_ID: ${{ secrets.XPKG_ACCESS_ID }}
+  XPKG_ACCESS_ID: ${{ secrets.XPKG_ACCESS_ID }}
 
   # The package to push, without a version tag. The default matches GitHub. For
   # example xpkg.upbound.io/crossplane/function-template-go.
-  # XPKG: xpkg.upbound.io/${{ github.repository}}
+  XPKG: xpkg.upbound.io/${{ github.repository}}
   CROSSPLANE_REGORG: ghcr.io/${{ github.repository}}
 
   # The PyPi project version to push. The default is v0.0.0+gitdate-gitsha.
