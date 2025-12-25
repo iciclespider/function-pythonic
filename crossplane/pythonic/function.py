@@ -48,7 +48,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         name.append(composite['metadata']['name'])
         logger = logging.getLogger('.'.join(name))
 
-        if composite['apiVersion'] == 'pythonic.fortra.com/v1alpha1' and composite['kind'] == 'Composite':
+        if composite['apiVersion'] in ('pythonic.crossplane.io/v1alpha1', 'pythonic.fortra.com/v1alpha1') and composite['kind'] == 'Composite':
             if 'spec' not in composite or 'composite' not in composite['spec']:
                 return self.fatal(request, logger, 'Missing spec "composite"')
             single_use = True

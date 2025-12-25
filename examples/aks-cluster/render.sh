@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # In one terminal
-# PYTHONPATH=. function-pythonic --insecure --debug
+# PYTHONPATH=. function-pythonic grpc --insecure --debug
 
 # In another terminal:
 

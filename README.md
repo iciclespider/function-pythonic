@@ -25,7 +25,7 @@ spec:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite: |
         class VpcComposite(BaseComposite):
@@ -324,7 +324,7 @@ just to run that Composition once in a single use or initialize task?
 function-pythonic installs a `Composite` CompositeResourceDefinition that enables
 creating such tasks using a single Composite resource:
 ```yaml
-apiVersion: pythonic.fortra.com/v1alpha1
+apiVersion: pythonic.fn.crossplane.io/v1alpha1
 kind: Composite
 metadata:
   name: composite-example
@@ -346,7 +346,7 @@ $ pip install crossplane-function-pythonic
 Next, create the following files:
 #### xr.yaml
 ```yaml
-apiVersion: pythonic.fortra.com/v1alpha1
+apiVersion: pythonic.fn.crossplane.io/v1alpha1
 kind: Hello
 metadata:
   name: world
@@ -358,10 +358,10 @@ spec:
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
-  name: hellos.pythonic.fortra.com
+  name: hellos.pythonic.crossplane.io
 spec:
   compositeTypeRef:
-    apiVersion: pythonic.fortra.com/v1alpha1
+    apiVersion: pythonic.crossplane.io/v1alpha1
     kind: Hello
   mode: Pipeline
   pipeline:
@@ -369,7 +369,7 @@ spec:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite: |
         class GreetingComposite(BaseComposite):
@@ -389,14 +389,14 @@ spec:
 ```
 In one terminal session, run function-pythonic:
 ```shell
-$ function-pythonic --insecure --debug --render-unknowns
+$ function-pythonic grpc --insecure --debug --render-unknowns
 [2025-08-21 15:32:37.966] grpc._cython.cygrpc  [DEBUG   ] Using AsyncIOEngine.POLLER as I/O engine
 ```
 In another terminal session, render the Composite:
 ```shell
 $ crossplane render xr.yaml composition.yaml functions.yaml
 ---
-apiVersion: pythonic.fortra.com/v1alpha1
+apiVersion: pythonic.crossplane.io/v1alpha1
 kind: Hello
 metadata:
   name: world
@@ -441,7 +441,7 @@ Then, in your Composition:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite: |
         from example.pythonic import features
@@ -473,7 +473,7 @@ data:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite: example.pythonic.features.FeatureOneComposite
     ...
@@ -580,7 +580,7 @@ data:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       parameters:
         who: World

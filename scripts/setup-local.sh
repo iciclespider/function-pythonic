@@ -196,8 +196,7 @@ spec:
       name: function-pythonic
 EOF
 
-#  package: ghcr.io/iciclespider/function-pythonic:v0.0.0-20251204014512-08165a015bbf
-#  package: ghcr.io/fortra/function-pythonic:v0.0.0-20250819201108-49cfb066579f
+#  package: ghcr.io/crossplane-contrib/function-pythonic:v0.0.0-20250819201108-49cfb066579f
 #  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.1.5
 
 kubectl apply -f - <<EOF
