@@ -1,7 +1,7 @@
 
 from . import (
-    command,
     __about__,
+    command,
 )
 
 

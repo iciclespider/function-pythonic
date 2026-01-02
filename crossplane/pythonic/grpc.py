@@ -1,5 +1,6 @@
 
 import asyncio
+import logging
 import os
 import pathlib
 import shlex
@@ -10,9 +11,12 @@ import crossplane.function.proto.v1.run_function_pb2_grpc as grpcv1
 import grpc
 
 from . import (
+    __about__,
     command,
     function,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class Command(command.Command):
@@ -77,6 +81,7 @@ class Command(command.Command):
             pip._internal.cli.main.main(['install', '--user', *shlex.split(self.args.pip_install)])
 
         self.initialize_function()
+        logger.info(f"Version: {__about__.__version__}")
 
         # enables read only volumes or mismatched uid volumes
         sys.dont_write_bytecode = True
