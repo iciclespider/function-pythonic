@@ -37,6 +37,12 @@ request:
 
 response:
   desired:
+    composite:
+      connection_details:
+        constant: constant-test
+        parameter: test
+        password-test: access-key-password
+        username-test: access-key-username
     resources:
       User:
         resource:

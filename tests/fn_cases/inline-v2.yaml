@@ -38,6 +38,10 @@ request:
 response:
   desired:
     composite:
+      connection_details:
+        password: hxt1nwu9vmt@qtb3HVW
+        url: http://www.example.com
+        username: test-user-0
       resource:
         status:
           dummy: cool-status

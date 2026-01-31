@@ -2,10 +2,10 @@
 
 def process(composite):
     for name, resource in composite.resources:
-        if resource.observed:
-            if resource.autoReady or (resource.autoReady is None and composite.autoReady):
+        if resource.autoReady or (resource.autoReady is None and composite.autoReady):
+            if resource.observed:
                 if resource.ready is None:
-                    if _checks.get((resource.apiVersion, resource.kind), _check_default).ready(resource):
+                    if _checks.get((resource.observed.apiVersion, resource.observed.kind), _check_default).ready(resource):
                         resource.ready = True
 
 

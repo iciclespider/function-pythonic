@@ -236,8 +236,8 @@ The BaseComposite class provides the following fields for manipulating the Compo
 | self.conditions | Conditions | The composite desired and observed conditions, read from observed if not in desired |
 | self.results | Results | Returned results applied to the Composite and optionally on the Claim |
 | self.connectionSecret | Map | The name, namespace, and resourceName to use when generating the connection secret in Crossplane v2 |
-| self.connection | Map | The composite desired connection detials |
-| self.connection.observed | Map | The composite observed connection detials |
+| self.connection | Map | The composite desired connection details |
+| self.connection.observed | Map | The composite observed connection details |
 | self.ready | Boolean | The composite desired ready state |
 
 The BaseComposite also provides access to the following Crossplane Function level features:
@@ -254,9 +254,9 @@ The BaseComposite also provides access to the following Crossplane Function leve
 | self.environment | Map | The response environment, initialized from the request context environment |
 | self.requireds | Requireds | Request and read additional local Kubernetes resources |
 | self.resources | Resources | Define and process composed resources |
-| self.unknownsFatal | Boolean | Terminate the composition if already created resources are assigned unknown values, default True |
 | self.usages| Boolean | Generate Crossplane Usages for resource dependencies, default False |
 | self.autoReady | Boolean | Perform auto ready processing on all composed resources, default True |
+| self.unknownsFatal | Boolean | Terminate the composition if already created resources are assigned unknown values, default False |
 
 ### Composed Resources
 
@@ -281,9 +281,10 @@ Resource class:
 | Resource.conditions | Conditions | The resource conditions |
 | Resource.connection | Map | The resource observed connection details |
 | Resource.ready | Boolean | The resource ready state |
-| Resource.unknownsFatal | Boolean | Terminate the composition if this resource has been created and is assigned unknown values, default is Composite.unknownsFatal |
+| Resource.setReadyCondition | Method | Set Resource.ready to the Ready Condition status |
 | Resource.usages | Boolean | Generate Crossplane Usages for this resource, default is Composite.autoReady |
 | Resource.autoReady | Boolean | Perform auto ready processing on this resource, default is Composite.autoReady |
+| Resource.unknownsFatal | Boolean | Terminate the composition if this resource has been created and is assigned unknown values, default is Composite.unknownsFatal |
 
 ### Required Resources
 
