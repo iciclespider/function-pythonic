@@ -57,7 +57,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.4.2
+  package: xpkg.crossplane.io/crossplane-contrib/function-pythonic:v0.6.0
 ```
 
 ### Crossplane V1
@@ -69,7 +69,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.4.2
+  package: xpkg.crossplane.io/crossplane-contrib/function-pythonic:v0.6.0
   runtimeConfigRef:
     name: function-pythonic
 --
@@ -266,6 +266,7 @@ The BaseComposite class provides the following fields for manipulating the Compo
 | self.metadata | Map | The composite observed metadata |
 | self.spec | Map | The composite observed spec |
 | self.status | Map | The composite desired and observed status, read from observed if not in desired |
+| self.output | Map | The step output, only used during Operations |
 | self.conditions | Conditions | The composite desired and observed conditions, read from observed if not in desired |
 | self.results | Results | Returned results applied to the Composite and optionally on the Claim |
 | self.connectionSecret | Map | The name, namespace, and resourceName to use when generating the connection secret in Crossplane v2 |
@@ -280,16 +281,30 @@ The BaseComposite also provides access to the following Crossplane Function leve
 | self.request | Message | Low level direct access to the RunFunctionRequest message |
 | self.response | Message | Low level direct access to the RunFunctionResponse message |
 | self.logger | Logger | Python logger to log messages to the running function stdout |
+| self.capabilities | Capabilities | This Crossplane version's Capabilities |
 | self.parameters | Map | The configured step parameters |
 | self.ttl | Integer | Get or set the response TTL, in seconds |
 | self.credentials | Credentials | The request credentials |
 | self.context | Map | The response context, initialized from the request context |
 | self.environment | Map | The response environment, initialized from the request context environment |
 | self.requireds | Requireds | Request and read additional local Kubernetes resources |
+| self.schemas | Schemas | Request and read CustomResourceDefinition schemas |
 | self.resources | Resources | Define and process composed resources |
 | self.usages| Boolean | Generate Crossplane Usages for resource dependencies, default False |
 | self.autoReady | Boolean | Perform auto ready processing on all composed resources, default True |
 | self.unknownsFatal | Boolean | Terminate the composition if already created resources are assigned unknown values, default False |
+
+### Capabiities
+
+The Capabilities of the Crossplane version calling function-pythonic.
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| bool(Capabilities) | Boolean | Whether or not the Crossplane version supports Capabilities |
+| Capabiities.requireds | Boolean | Functions can return required resources and Crossplane will fetch the required resources |
+| Capabiities.credentials | Boolean | Functions can receive credentials from secrets specified in the Composition |
+| Capabiities.conditions | Boolean | Functions can return status conditions to be applied to the XR and optionally its claim |
+| Capabiities.schemas | Boolean | Functions can request OpenAPI schemas and Crossplane will return them |
 
 ### Composed Resources
 
@@ -324,7 +339,7 @@ Resource class:
 
 Creating and accessing required resources is performed using the `BaseComposite.requireds` field.
 `BaseComposite.requireds` is a dictionary of the required resources whose key is the required
-resource name. The value returned when getting a required resource from BaseComposite is the
+schema name. The value returned when getting a required resource from BaseComposite is the
 following RequiredResources class:
 
 | Field | Type | Description |
@@ -336,9 +351,6 @@ following RequiredResources class:
 | RequiredResources.namespace | String | The namespace to match when returning the required resources, see note below |
 | RequiredResources.matchName | String | The names to match when returning the required resources |
 | RequiredResources.matchLabels | Map | The labels to match when returning the required resources |
-
-The current version of crossplane-sdk-python used by function-pythonic does not support namespace
-selection. For now, use matchLabels and filter the results if required.
 
 RequiredResources acts like a Python list to provide access to the found required resources.
 Each resource in the list is the following RequiredResource class:
@@ -355,6 +367,22 @@ Each resource in the list is the following RequiredResource class:
 | RequiredResource.status | Map | The required resource status |
 | RequiredResource.conditions | Map | The required resource conditions |
 | RequiredResource.connection | Map | The required resource connection details |
+
+### Required Schemas
+
+Creating and accessing required schemas is performed using the `BaseComposite.schemas` field.
+`BaseComposite.schemas` is a dictionary of the required schema whose key is the required
+resource name. The value returned when getting a required resource from BaseComposite is the
+following Schema class:
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| Schema(apiVersion,kind) | Schema | Reset the required schema and set the optional parameters |
+| Schema.name | String | The required schema name |
+| Schema.apiVersion | String | The required schema selector apiVersion |
+| Schema.kind | String | The required schema selector kind |
+| Schema.\_\_getitem\_\_ | Map | The required schema openAPIV3Schema |
+| Schema.\_\_getattr\_\_ | Map | The required schema openAPIV3Schema |
 
 ### Conditions
 
@@ -474,7 +502,7 @@ $ function-pythonic render --help
 usage: Crossplane Function Pythonic render [-h] [--debug] [--log-name-width WIDTH] [--logger-level LOGGER=LEVEL] [--python-path DIRECTORY]
                                            [--render-unknowns] [--allow-oversize-protos] [--crossplane-v1] [--kube-context CONTEXT]
                                            [--context-files KEY=PATH] [--context-values KEY=VALUE] [--observed-resources PATH]
-                                           [--required-resources PATH] [--secret-store PATH] [--include-full-xr] [--include-connection-xr]
+                                           [--required-resources PATH] [--required-schemas PATH] [--include-full-xr] [--include-connection-xr]
                                            [--include-function-results] [--include-context]
                                            COMPOSITE [COMPOSITION]
 
@@ -506,8 +534,8 @@ options:
                         A YAML file or directory of YAML files specifying the observed state of composed resources.
   --required-resources, -e PATH
                         A YAML file or directory of YAML files specifying required resources to pass to the Function pipeline.
-  --secret-store, -s PATH
-                        A YAML file or directory of YAML files specifying Secrets to use to resolve connections and credentials.
+  --required-schemas, -s PATH
+                        A JSON file or directory of JSON files specifying required schemas to pass to the Function pipeline.
   --include-full-xr, -x
                         Include a direct copy of the input XR's spedc and metadata fields in the rendered output.
   --include-connection-xr
@@ -576,9 +604,15 @@ status:
 Most of the examples contain a `render.sh` command which uses `function-pythonic render` to
 render the example.
 
-## ConfigMap Packages
+## Shared Python Packages
 
-ConfigMap based python packages are enable using the `--packages` and
+Python packages and modules can be added to the function-pythonic runtime
+by including the python code in any of the following resources: ConfigMap,
+Secret, EnvironmentConfig, or Composition
+
+### ConfigMap Packages
+
+ConfigMap based python packages are enable using the `--packages-configmaps` and
 `--packages-namespace` command line options. ConfigMaps with the label
 `function-pythonic.package` will be incorporated in the python path at
 the location configured in the label value. For example, the following
@@ -640,7 +674,7 @@ data:
       composite: example.pythonic.features.FeatureOneComposite
     ...
 ```
-This requires enabling the the packages support using the `--packages` command
+This requires enabling the the packages support using the `--packages-configmaps` command
 line option in the DeploymentRuntimeConfig and configuring the required
 Kubernetes RBAC permissions. For example:
 ```yaml
@@ -649,7 +683,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.4.2
+  package: xpkg.crossplane.io/crossplane-contrib/function-pythonic:v0.6.0
   runtimeConfigRef:
     name: function-pythonic
 ---
@@ -711,9 +745,71 @@ ClusterRole permissions. The `--packages-namespace` command line option will res
 to only using the supplied namespace. This option can be invoked multiple times.
 The above RBAC permission can then be per namespace RBAC Role permissions.
 
+### Secret Packages
+
 Secrets can also be used in an identical manner as ConfigMaps by enabling the
 `--packages-secrets` command line option. Secrets permissions need to be
-added to the above RBAC configuration.
+added to the above RBAC configuration. Secret based python packages also enable
+provisioning files with binary data.
+
+### EnvironmentConfig Packages
+
+EnvironmentConfig based provisioning enable an entire package and module
+directory structure. Use the `--packages-environmentconfigs` command line option
+and configure the ClusterRole RBAC access.
+```yaml
+apiVersion: apiextensions.crossplane.io/v1beta1
+kind: EnvironmentConfig
+metadata:
+  name: test
+  labels:
+    function-pythonic.package: 'true'
+data:
+  arootpackage:
+    asubpackage:
+      bmodule.py: |
+        def hello(where):
+          return f"Hello, {where}!"
+    amodule.py: |
+      def goodby(where):
+        return f"Goodby, {where}!"
+```
+### Composition Packages
+
+Composition based provisioning works just like EnvironmentConfig where a
+directory structure is created. Use the `--packages-compositions` command line option
+and configure the ClusterRole RBAC access. The main reason to use Composition
+based provision is because Compositions can be included in a Crossplane
+Configuration Package.
+```yaml
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  labels:
+    function-pythonic.package: 'true'
+  name: test
+spec:
+  compositeTypeRef:
+    apiVersion: code.pythoni.com/v1alpha1
+    kind: Code
+  mode: Pipeline
+  pipeline:
+  - step: render
+    functionRef:
+      name: function-pythonic
+    input:
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
+      kind: Composite
+      packages:
+        arootpackage:
+          asubpackage:
+            bmodule.py: |
+              def hello(where):
+                return f"Hello, {where}!"
+          amodule.py: |
+            def goodby(where):
+              return f"Goodby, {where}!"
+```
 
 ## Step Parameters
 

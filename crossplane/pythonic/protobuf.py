@@ -986,6 +986,8 @@ class Value:
         elif len(args):
             for key in range(len(args)):
                 self[key] = args[key]
+        else:
+            self._ensure_map()
         return self
 
     def __setattr__(self, key, value):

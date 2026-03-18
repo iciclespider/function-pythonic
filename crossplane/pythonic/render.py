@@ -3,6 +3,7 @@ import asyncio
 import importlib
 import inflect
 import inspect
+import json
 import kr8s
 import logging
 import pathlib
@@ -12,10 +13,10 @@ from crossplane.function.proto.v1 import run_function_pb2 as fnv1
 
 from . import (
     command,
-    composite as composite_module,
     function,
     protobuf,
 )
+from .composite import BaseComposite
 
 INFLECT = inflect.engine()
 INFLECT.classical(all=False)
@@ -58,7 +59,7 @@ class Command(command.Command):
             action='append',
             default=[],
             metavar='KEY=VALUE',
-            help='Context key-value pairs to pass to the Function pipeline. Values must be sYAML/JSON. Keys take precedence over --context-files.',
+            help='Context key-value pairs to pass to the Function pipeline. Values must be YAML/JSON. Keys take precedence over --context-files.',
         )
         parser.add_argument(
             '--observed-resources', '-o',
@@ -77,12 +78,12 @@ class Command(command.Command):
             help='A YAML file or directory of YAML files specifying required resources to pass to the Function pipeline.',
         )
         parser.add_argument(
-            '--secret-store', '-s',
+            '--required-schemas', '-s',
             action='append',
             type=pathlib.Path,
             default=[],
             metavar='PATH',
-            help='A YAML file or directory of YAML files specifying Secrets to use to resolve connections and credentials.',
+            help='A JSON file or directory of JSON files specifying required schemas to pass to the Function pipeline.',
         )
         parser.add_argument(
             '--include-full-xr', '-x',
@@ -119,11 +120,10 @@ class Command(command.Command):
         observed = self.collect_resources(self.args.observed_resources)
         composition = await self.setup_composition(composite, api)
         resources = self.collect_resources(self.args.required_resources)
-        resources += self.collect_resources(self.args.secret_store)
-        resources.sort(key=lambda resource: str(resource.metadata.name))
+        schemas = self.collect_schemas(self.args.required_schemas)
         context = self.setup_context()
 
-        render = await self.render(composite, observed, composition, resources, context, api, self.args.render_unknowns, self.args.crossplane_v1)
+        render = await self.render(composite, observed, composition, resources, schemas, context, api, self.args.render_unknowns, self.args.crossplane_v1)
         if not render:
             sys.exit(1)
 
@@ -212,7 +212,7 @@ class Command(command.Command):
         if not inspect.isclass(clazz):
             print(f"Composition class {self.args.composition} is not a class", file=sys.stderr)
             sys.exit(1)
-        if not issubclass(clazz, composite_module.BaseComposite):
+        if not issubclass(clazz, BaseComposite):
             print(f"Composition class {self.args.composition} is not a subclass of BaseComposite", file=sys.stderr)
             sys.exit(1)
         return self.create_composition(composite, self.args.composition)
@@ -246,7 +246,24 @@ class Command(command.Command):
             else:
                 print(f"Specified resource is not a file or a directory: {entry}", file=sys.stderr)
                 sys.exit(1)
+        resources.sort(key=lambda resource: str(resource.metadata.name))
         return resources
+
+    def collect_schemas(self, entries):
+        schemas = []
+        for entry in entries:
+            if entry.is_file():
+                document = json.loads(entry.read_text())
+                schemas.append(protobuf.Value(None, None, document))
+            elif entry.is_dir():
+                for file in entry.iterdir():
+                    if file.suffix == '.json':
+                        document = json.loads(file.read_text())
+                        schemas.append(protobuf.Value(None, None, document))
+            else:
+                print(f"Specified resource is not a file or a directory: {entry}", file=sys.stderr)
+                sys.exit(1)
+        return schemas
 
     def setup_context(self):
         # Load the request context with any specified command line options.
@@ -269,7 +286,7 @@ class Command(command.Command):
             context[key_value[0]] = protobuf.Yaml(key_value[1])
         return context
 
-    async def render(self, composite, observed=[], composition=None, resources=[], context=None, api=None, render_unknowns=False, crossplane_v1=False, composite_observeds=True):
+    async def render(self, composite, observed=[], composition=None, resources=[], schemas=[], context=None, api=None, render_unknowns=False, crossplane_v1=False, composite_observeds=True):
         # Create the request used when running Composition steps.
         request = protobuf.Message(None, 'request', fnv1.RunFunctionRequest.DESCRIPTOR, fnv1.RunFunctionRequest())
         if context is not None:
@@ -362,6 +379,10 @@ class Command(command.Command):
                 request.extra_resources()
                 for name, selector in requirements.extra_resources:
                     await self.set_required(name, selector, request.extra_resources, resources, api)
+                # Fetch the schemas requested.
+                request.required_schemas()
+                for name, selector in requirements.schemas:
+                    await self.set_schema(name, selector, request.required_schemas, schemas, api)
                 # Run the step using the function-pythonic function runner.
                 response = protobuf.Message(
                     None,
@@ -545,6 +566,81 @@ class Command(command.Command):
                 destination.connection_details()
                 for key, value in connection.data:
                     destination.connection_details[key] = protobuf.B64Decode(value)
+
+    async def set_schema(self, name, selector, schemas, documents=[], api=None):
+        if not name:
+            return
+        name = str(name)
+        schema = schemas[name].openapi_v3
+        schema() # Force this to get created
+        gvk = protobuf.Map(kind=selector.kind)
+        version = str(selector.api_version)
+        if '/' in version:
+            gvk.group, gvk.version = version.split('/', 1)
+        else:
+            gvk.group = ''
+            gvk.version = version
+        for document in documents:
+            if self.find_schema(gvk, document, schema):
+                return
+        if api:
+            if gvk.group == '':
+                url = f"api/{gvk.version}"
+            else:
+                url = f"apis/{gvk.group}/{gvk.version}"
+            try:
+                async with api.call_api(base='/openapi/v3', version='', url=url) as response:
+                    document = protobuf.Value(None, None, response.json())
+            except kr8s.NotFoundError:
+                return
+            self.find_schema(gvk, document, schema)
+
+    def find_schema(self, gvk, document, schema):
+        for name, s in document.components.schemas:
+            gvks = s['x-kubernetes-group-version-kind']
+            if len(gvks) == 1 and gvks[0] == gvk:
+                self.resolve_ref(document, set(), f"#/components/schemas/{name}", schema)
+                return True
+        return False
+
+    def resolve_ref(self, document, visiting, ref, schema):
+        if not ref:
+            return
+        ref = str(ref)
+        if ref in visiting:
+            return
+        d = None
+        for segment in ref.split('/'):
+            if segment == '#':
+                d = document
+            else:
+                d = d[segment]
+        if not d:
+            return
+        visiting.add(ref)
+        try:
+            for name, value in d:
+                self.copy_schema(document, visiting, name, value, schema)
+        finally:
+            visiting.remove(ref)
+
+    def copy_schema(self, document, visiting, key, value, schema):
+        if key == '$ref':
+            self.resolve_ref(document, visiting, value, schema)
+        elif key == 'allOf':
+            if value._isList and len(value) == 1:
+                self.resolve_ref(document, visiting, value[0]['$ref'], schema)
+        else:
+            if value._isMap:
+                s = schema[key]
+                for n, v in value:
+                    self.copy_schema(document, visiting, n, v, s)
+            elif value._isList:
+                s = schema[key]
+                for ix, v in enumerate(value):
+                    self.copy_schema(document, visiting, ix, v, s)
+            else:
+                schema[key] = value
 
     def copy_resource(self, source, destination):
         destination.resource = source.resource
