@@ -113,7 +113,7 @@ def test_json():
     assert isinstance(value, protobuf.Value)
     assert value._isList
     assert len(value) == 2
-    assert format(value, 'json') == json    
+    assert format(value, 'json') == json
     value = protobuf.Json('"test"')
     assert isinstance(value, protobuf.Value)
     assert value == 'test'
@@ -165,6 +165,18 @@ def test_values_map():
     assert values._getUnknowns
     assert values == values
 
+def test_dictionary_union_map():
+    value = protobuf.Map(a=1)
+    other = protobuf.Map(b=1.1)
+    dictionary = {'c': 1.2}
+    temp = other | value
+    assert isinstance(temp, protobuf.Value)
+    assert temp.a == 1
+    assert temp.b == 1.1
+    temp = temp | dictionary
+    assert isinstance(temp, protobuf.Value)
+    assert temp.a == 1
+    assert temp.c == 1.2
 
 def test_values_list():
     values = protobuf.List(
